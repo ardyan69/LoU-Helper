@@ -3,6 +3,7 @@ import { getAll, fullAt, emptyAt, RES, RES_LABEL, uid, trainingTimes, unitName }
 import { parseShareString, fromGame, isBuilding, N } from './lib/city.js';
 import { initLang, t, locale } from './lib/i18n.js';
 import { updateCalibration, applyFactor } from './lib/speedcal.js';
+import { snapshotCities, trackLoot, logIncoming } from './lib/history.js';
 import { mergeSettings } from './lib/shared.js';
 
 // A share string copied in the game becomes (or refreshes) that city's "from game" layout.
@@ -94,7 +95,11 @@ async function reschedule() {
     }
   }
 
+  if (!existing.some((al) => al.name === 'history')) {
+    chrome.alarms.create('history', { delayInMinutes: 1, periodInMinutes: 60 });
+  }
   for (const al of existing) {
+    if (al.name === 'history') continue;
     const t = want.get(al.name);
     if (t == null) await chrome.alarms.clear(al.name);
     else if (Math.abs(al.scheduledTime - t) < 60000) want.delete(al.name); // already scheduled ~same time
@@ -110,8 +115,28 @@ function debounceReschedule() {
 
 chrome.storage.onChanged.addListener((ch, area) => {
   if (area === 'local' && (ch.cities || ch.settings || ch.movements)) debounceReschedule();
-  if (area === 'local' && ch.movements?.newValue) calibrate(ch.movements.newValue).catch(console.warn);
+  if (area === 'local' && ch.movements?.newValue) { calibrate(ch.movements.newValue).catch(console.warn); trackMovements(ch.movements.newValue).catch(console.warn); }
 });
+
+// Loot per day / per city, explored % gained per dungeon, incoming attack history
+let trackChain = Promise.resolve();
+function trackMovements(mv) {
+  trackChain = trackChain.catch(() => {}).then(async () => {
+    const d = await chrome.storage.local.get(['lootLog', 'dungeonGains', 'dungeons', 'attackLog']);
+    const patch = {};
+    const r = trackLoot(d.lootLog, d.dungeonGains, d.dungeons, mv);
+    if (r) { patch.lootLog = r.log; patch.dungeonGains = r.gains; }
+    const al = logIncoming(d.attackLog, mv);
+    if (al) patch.attackLog = al;
+    if (Object.keys(patch).length) await chrome.storage.local.set(patch);
+  });
+  return trackChain;
+}
+async function snapshotHistory() {
+  const d = await chrome.storage.local.get(['cities', 'history']);
+  const h = snapshotCities(d.history, d.cities);
+  await chrome.storage.local.set({ history: h });
+}
 
 // Auto speed calibration: real minutes/field from the armies currently on the move.
 let calChain = Promise.resolve();
@@ -122,7 +147,7 @@ function calibrate(mv) {
     if (!cal) return;
     const patch = { speedCal: cal };
     const s = mergeSettings(d.settings);
-    if (s.autoSpeed !== false) {
+    if (s.autoSpeed !== false && cal.factor) {
       const units = applyFactor(s.units, cal.factor);
       if (units) patch.settings = { ...(d.settings || {}), units, unitsRev: s.unitsRev };
     }
@@ -167,6 +192,7 @@ async function onIncoming(list) {
 }
 
 chrome.alarms.onAlarm.addListener(async (al) => {
+  if (al.name === 'history') { await snapshotHistory().catch(console.warn); return; }
   const [kind, key, res] = al.name.split('|');
   await initLang();
   if (kind === 'train' || kind === 'trade') {

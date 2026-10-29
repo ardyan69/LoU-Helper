@@ -1,6 +1,8 @@
 // "📜 Cheat Sheet" — Dungeons | Bosses | Recruit % | Troops Stats.
 import { esc, RES_ICON } from '../lib/shared.js';
 import { t, locale } from '../lib/i18n.js';
+import * as bld from './cs-buildings.js';
+import * as bt from './cs-battle.js';
 import {
   REV_UNITS, unitById, EFF, REV_DUNGEONS, DUNGEON_KINDS, DUNGEON_UNITS, dungeonLevel, dungeonNeed, raid, unitEff, progressMult,
   REV_BOSSES, BOSS_KINDS, BOSS_UNITS, BOSS_HP, BOSS_LOOT, BOSS_GOLD, bossNeed, bossFight,
@@ -41,6 +43,8 @@ export function mount(el, c) {
         <button data-part="recruit">⏱️ Recruit %</button>
         <button data-part="troops">🛡️ Troops Stats</button>
         <button data-part="layouts">🏗️ Layouts</button>
+        <button data-part="buildings">🧱 Buildings</button>
+        <button data-part="battle">⚔️ Battle</button>
       </div>
     </div>
     <div class="toolbar" id="cs-src-bar">
@@ -60,6 +64,7 @@ export function mount(el, c) {
   });
   const body = root.querySelector('#cs-body');
   body.addEventListener('click', (e) => {
+    if (st.part === 'battle' && bt.onClick(e, ctx.state, render)) return;
     const b = e.target.closest('[data-kind],[data-boss],[data-lay]');
     if (!b) return;
     if (b.dataset.kind) st.kind = b.dataset.kind; else if (b.dataset.lay) st.lay = b.dataset.lay; else st.boss = b.dataset.boss;
@@ -71,6 +76,8 @@ export function mount(el, c) {
 
 function onInput(e) {
   const el = e.target;
+  if (st.part === 'buildings' && bld.onInput(e, root, render)) return;
+  if (st.part === 'battle' && (e.type === 'change' || el.type === 'number') && bt.onInput(e, root, ctx.state, render)) return;
   if (el.id === 'cs-prog') { st.prog = clamp(+el.value, 0, 100); persist(); renderTables(); return; }
   if (el.dataset.calc) { st.calc[el.dataset.calc] = el.type === 'number' ? +el.value : el.value; persist(); if (el.dataset.calc === 'kind') { fixUnit(st.calc, DUNGEON_UNITS); render(); } else paintCalc(); return; }
   if (el.dataset.bcalc) { st.bcalc[el.dataset.bcalc] = el.type === 'number' ? +el.value : el.value; persist(); if (el.dataset.bcalc === 'kind') { fixUnit(st.bcalc, BOSS_UNITS, true); render(); } else paintBossCalc(); return; }
@@ -88,17 +95,21 @@ export function render() {
   if (!root) return;
   root.querySelectorAll('#cs-seg [data-part]').forEach((b) => b.classList.toggle('on', b.dataset.part === st.part));
   root.querySelectorAll('#cs-src [data-src]').forEach((b) => b.classList.toggle('on', b.dataset.src === st.src));
-  root.querySelector('#cs-src-bar').classList.toggle('hide', st.part === 'troops' || st.part === 'layouts');
+  root.querySelector('#cs-src-bar').classList.toggle('hide', ['troops', 'layouts', 'buildings', 'battle'].includes(st.part));
   const body = root.querySelector('#cs-body');
-  const com = st.src === 'com' && st.part !== 'troops' && st.part !== 'layouts';
+  const com = st.src === 'com' && ['dungeons', 'bosses', 'recruit'].includes(st.part);
   body.innerHTML = st.part === 'bosses' ? (com ? comBosses() : revBosses())
     : st.part === 'recruit' ? (com ? comRecruit() : revRecruit())
     : st.part === 'troops' ? troops()
     : st.part === 'layouts' ? layouts()
+    : st.part === 'buildings' ? bld.html(ctx.state)
+    : st.part === 'battle' ? bt.html(ctx.state)
     : (com ? comDungeons() : revDungeons());
   if (!com && st.part === 'dungeons') { renderTables(); paintCalc(); }
   if (!com && st.part === 'bosses') paintBossCalc();
   if (!com && st.part === 'recruit') { paintRecCity(); renderRecruitTables(); }
+  if (st.part === 'buildings') bld.paint(root);
+  if (st.part === 'battle') bt.paint(root);
 }
 
 // ================= Dungeons (Revival) =================

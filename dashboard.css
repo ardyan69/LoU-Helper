@@ -30,7 +30,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 /* header */
 header.app {
   position: sticky; top: 0; z-index: 10;
-  display: flex; align-items: center; gap: 16px; padding: 12px 20px;
+  display: flex; align-items: center; gap: 6px 16px; padding: 10px 20px 0; flex-wrap: wrap;
   background: linear-gradient(#1d1710, #17120c); border-bottom: 1px solid var(--line);
 }
 header.app img { width: 30px; height: 30px; }
@@ -335,3 +335,40 @@ dialog.optdlg { width: min(740px, 94vw); }
 .cs-lay { table-layout: fixed; }
 .cs-lay th:first-child, .cs-lay td:first-child { width: 110px; }
 .cs-lay td.rev, .cs-lay th:last-child { width: 170px; }
+
+/* ---------- charts ---------- */
+.ch-wrap { position: relative; }
+.ch { width: 100%; height: auto; display: block; }
+.ch-grid { stroke: #ffffff14; stroke-width: 1; }
+.ch-ax { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.ch-cross { stroke: #ffffff55; stroke-width: 1; stroke-dasharray: 3 3; }
+.ch-title { font-weight: 600; margin-bottom: 4px; }
+.ch-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--muted); margin: 2px 0 6px; }
+.ch-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.ch-legend i, .ch-tip i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; }
+.ch-tip { position: absolute; top: 8px; background: #120e09f2; border: 1px solid var(--line); border-radius: 8px; padding: 6px 9px; font-size: 12px; pointer-events: none; min-width: 140px; z-index: 3; }
+.ch-tip b { display: block; margin-bottom: 3px; color: var(--text); }
+.ch-tip div { display: flex; align-items: center; gap: 6px; color: var(--text); font-variant-numeric: tabular-nums; }
+.ch-bar { cursor: pointer; }
+/* ---------- misc new views ---------- */
+.bad-t { color: var(--bad); }
+.cs-tbl tr.sel td { background: #3a2c1766; }
+.bt-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }
+.bt-grid input[type=number] { width: 100%; }
+.bt-cols { align-items: start; }
+.cs-res b select.sm { font-size: 12px; padding: 2px 4px; margin-left: 4px; }
+dialog.stepsdlg { width: min(1080px, 96vw); }
+.cs-tbl.steps tr.demolish td:nth-child(2) { color: var(--bad); }
+.cs-tbl.steps tr.build td:nth-child(2) { color: var(--good); }
+#pl-side .card + .card { margin-top: 12px; }
+#pl-side textarea { width: 100%; }
+.cs-tbl .warn-t { color: var(--warn); }
+.two-col.bt-cols, #bt-out .two-col { grid-template-columns: 1fr 1fr; }
+@media (max-width: 1100px) { .two-col.bt-cols, #bt-out .two-col { grid-template-columns: 1fr; } }
+
+/* two-row header: brand + status on top, tabs full width below */
+header.app nav.tabs { order: 3; flex: 1 0 100%; margin-left: -6px; padding-bottom: 6px; }
+header.app #live { margin-left: auto; }
+.bt-wall { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+.bt-nl { display: flex; align-items: center; gap: 4px; color: var(--muted); }
+.bt-grid .bt-nl input[type=number] { width: 58px; }

@@ -1,6 +1,8 @@
 import { fmtNum, fmtDur, fmtAgo, dist, esc, uid } from '../lib/shared.js';
 import { t, locale } from '../lib/i18n.js';
 import * as planner from './raidplan.js';
+import { exploredEst } from '../lib/history.js';
+import { unitById, DUNGEON_UNITS, dungeonLevel, dungeonNeed, raid } from '../lib/cheatsheet.js';
 
 const TYPES = ['Forest', 'Hill', 'Mountain', 'Sea'];
 const TYPE_ID = { Forest: 'Forest', Hill: 'Hill', Mountain: 'Mountain', Sea: 'Sea' }; // game names (English)
@@ -131,7 +133,7 @@ export function render(state) {
 export function onData(state, keys) {
   if (!root.classList.contains('on')) return;
   if (part === 'plan') { if (keys.some((k) => ['dungeons', 'cities', 'movements', 'settings'].includes(k))) planner.render(); return; }
-  if (keys.includes('dungeons') || keys.includes('cities')) { renderTable(); if (keys.includes('dungeons')) renderCalcHead(); }
+  if (['dungeons', 'cities', 'movements', 'dungeonGains'].some((k) => keys.includes(k))) { renderTable(); if (keys.includes('dungeons')) renderCalcHead(); }
   if (keys.includes('raids')) renderStats();
   if (keys.includes('settings')) renderCalc();
 }
@@ -160,10 +162,44 @@ function rows() {
   });
 }
 
+// armies currently raiding / returning from a dungeon
+function raiders(d) {
+  const out = [];
+  for (const a of ctx.state.movements?.armies || []) {
+    if (a.trade) continue;
+    if ((a.toX === d.x && a.toY === d.y) || (a.fromX === d.x && a.fromY === d.y && /return/i.test(a.order || ''))) out.push(a);
+  }
+  return out;
+}
+// priority: loot per hour per troop from the nearest city, with the best unit that city has (berserker if unknown)
+function priority(d, n) {
+  if (d.kind === 'boss' || !n) return null;
+  const kind = String(d.type || '').toLowerCase();
+  if (!['mountain', 'forest', 'hill', 'sea'].includes(kind)) return null;
+  const prog = exploredEst(d, ctx.state.dungeonGains?.[d.key]);
+  if (prog >= 100) return 0;
+  const tr = (ctx.state.movements?.training || []).find((c) => c.x === n.city.x && c.y === n.city.y);
+  const ids = (kind === 'sea' ? DUNGEON_UNITS.sea : DUNGEON_UNITS.land).filter((id) => (tr?.units?.[id] || 0) > 0);
+  const pool = ids.length ? ids : kind === 'sea' ? ['frigate'] : ['berserker'];
+  let best = null;
+  for (const id of pool) {
+    const u = unitById(id), need = dungeonNeed(kind, d.level, prog, u);
+    if (!need) continue;
+    const mpf = ctx.state.settings.units.find((x) => x.id === id)?.minPerField || u.spd;
+    const trip = 2 * n.d * mpf + (ctx.state.settings.raidOverheadMin || 0);
+    const r = raid(kind, d.level, prog, u, need.n);
+    const eff = r.carried / (trip / 60) / need.n;
+    if (!best || eff > best.eff) best = { eff, u, n: need.n, perH: r.carried / (trip / 60) };
+  }
+  return best;
+}
+
 function renderTable() {
   const list = rows();
+  for (const r of list) { r.est = exploredEst(r.d, ctx.state.dungeonGains?.[r.d.key]); r.raid = raiders(r.d); r.prio = priority(r.d, r.n); }
   const key = {
-    dist: (r) => r.n?.d ?? 1e9, level: (r) => r.d.level, explored: (r) => r.d.explored ?? 0,
+    prio: (r) => -(r.prio?.eff ?? -1), raid: (r) => -r.raid.length,
+    dist: (r) => r.n?.d ?? 1e9, level: (r) => r.d.level, explored: (r) => r.est ?? 0,
     loot: (r) => r.d.maxLoot ?? 0, guardians: (r) => r.d.guardians ?? 0, seen: (r) => -(r.d.seenAt || 0), type: (r) => r.d.type
   }[f.sort];
   list.sort((a, b) => { const x = key(a), y = key(b); return (x > y ? 1 : x < y ? -1 : 0) * f.dir; });
@@ -180,27 +216,37 @@ function renderTable() {
       <th>${t('Koordinat')}</th>
       <th class="sort r" data-sort="dist">${t('Jarak')}${arrow('dist')}</th>
       <th class="sort" data-sort="explored">Explored${arrow('explored')}</th>
+      <th class="sort r" data-sort="prio" title="${t('Loot per jam per pasukan dari kota terdekat (unit terbaik yang dimiliki kota itu)')}">⭐ ${t('Prioritas')}${arrow('prio')}</th>
+      <th class="sort" data-sort="raid">⚔️${arrow('raid')}</th>
       <th class="sort r" data-sort="guardians">Guardians${arrow('guardians')}</th>
       <th class="sort r" data-sort="loot">Max loot${arrow('loot')}</th>
       <th>Weak to</th>
       <th class="sort" data-sort="seen">${t('Dilihat')}${arrow('seen')}</th>
       <th></th>
     </tr></thead>
-    <tbody>${list.map(({ d, n }) => `
+    <tbody>${list.map(({ d, n, est, raid: rd, prio }) => `
       <tr data-key="${d.key}" class="${d.key === selKey ? 'sel' : ''}" style="cursor:pointer">
         <td>${d.kind === 'boss' ? '👹' : TYPE_ICON[d.type] || '❔'} ${esc(TYPE_ID[d.type] || d.type)}${d.note ? ` <span class="muted small" title="${esc(d.note)}">📝</span>` : ''}</td>
         <td class="r num"><b>${d.level}</b></td>
         <td><a href="#" data-copy="${d.key}" title="${t('Salin')}">${d.cont != null ? 'C' + d.cont + ' · ' : ''}${d.key}</a></td>
         <td class="r num">${n ? `${n.d.toFixed(1)} <span class="muted small">${esc(n.city.name)}</span>` : '—'}</td>
-        <td><span class="bar prog"><i style="width:${d.explored ?? 0}%;background:${(d.explored ?? 0) >= 75 ? 'var(--bad)' : 'var(--gold)'}"></i></span><span class="num small">${d.explored ?? '?'}%</span></td>
+        <td><span class="bar prog"><i style="width:${est ?? 0}%;background:${(est ?? 0) >= 75 ? 'var(--bad)' : 'var(--gold)'}"></i></span><span class="num small">${d.explored ?? '?'}%${est > (d.explored ?? 0) ? ` <span class="muted" title="${t('Perkiraan dari raid sejak terakhir terlihat di peta')}">→ ~${est}%</span>` : ''}</span></td>
+        <td class="r num">${prio ? `<b>${prio.eff.toFixed(2)}</b> <span class="muted small" title="${esc(t('{n}× {u} · {l} loot/jam', { n: prio.n, u: prio.u.name, l: fmtNum(prio.perH) }))}">${esc(prio.u.name)}</span>` : '—'}</td>
+        <td>${rd.length ? `<span class="pill good" title="${esc(rd.map((a) => `${a.order} · ${Object.entries(a.units || {}).map(([k, v]) => v + '× ' + (unitById(k)?.name || k)).join(', ')}`).join('\n'))}">⚔️ ${rd.length}</span>` : ''}</td>
         <td class="r num">${fmtNum(d.guardians)}</td>
-        <td class="r num">${fmtNum(d.maxLoot)}</td>
+        <td class="r num">${d.maxLoot != null ? fmtNum(d.maxLoot) : estLoot(d, est)}</td>
         <td>${esc(d.weakTo || '')}</td>
         <td class="small muted">${fmtAgo(d.seenAt)}</td>
         <td><button class="btn sm" data-edit="${d.key}" title="${t('Ubah')}">✎</button> <button class="btn sm danger" data-del="${d.key}" title="${t('Hapus')}">✕</button></td>
-      </tr>`).join('') || `<tr><td colspan="10" class="muted" style="text-align:center;padding:20px">${t('Tidak ada dungeon yang cocok dengan filter.')}</td></tr>`}
+      </tr>`).join('') || `<tr><td colspan="12" class="muted" style="text-align:center;padding:20px">${t('Tidak ada dungeon yang cocok dengan filter.')}</td></tr>`}
     </tbody></table>`;
   el.querySelectorAll('a[data-copy]').forEach((a) => a.addEventListener('click', (e) => e.preventDefault()));
+}
+
+function estLoot(d, est) {
+  const kind = String(d.type || '').toLowerCase();
+  if (d.kind === 'boss' || !['mountain', 'forest', 'hill', 'sea'].includes(kind) || !d.level) return '—';
+  return `<span class="muted" title="${t('Dihitung dari rumus game (level + explored %)')}">≈${fmtNum(dungeonLevel(kind, d.level, est || 0).loot)}</span>`;
 }
 
 // ---------- calculator ----------

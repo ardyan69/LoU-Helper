@@ -4,6 +4,16 @@
 
 Dibuat oleh **ardhie** (ardhie.andro@gmail.com).
 
+## v1.13.0 — 2026-10-29
+
+- 📈 Tab Statistik: grafik loot raid per hari, loot per kota, produksi total, skor, dan pasukan per kota (dicatat otomatis tiap jam).
+- 👥 Tab Pemain: pemain & aliansi yang terlihat di peta, status hubungan & catatan, serta riwayat serangan masuk per pemain.
+- 🔁 Ringkasan Kota → Transfer: saran kirim resource antar-kota (jumlah, gerobak, waktu tempuh).
+- 📋 Perencana Layout → Langkah pembangunan: urutan bongkar/bangun/upgrade dari kota ke rencana, dengan biaya & waktu.
+- Cheat Sheet → 🧱 Buildings: biaya & waktu bangun tiap level (data game) dengan kecepatan bangun kotamu; ⚔️ Battle: simulator serangan/pertahanan dengan aturan game.
+- Dungeon: tanda dungeon yang sedang diraid, perkiraan explored % terkini, kolom ⭐ Prioritas, dan perkiraan max loot dari rumus game.
+- Header dashboard dua baris agar semua tab muat.
+
 ## v1.12.0 — 2026-10-29
 
 - 🎯 Raid Planner di tab Dungeon: pilih kota, extension menyarankan dungeon terdekat yang cocok dengan pasukan di kota itu, jumlah pasukan per dungeon (rumus Revival), loot per jam, dan berapa raid sampai explored 100%.

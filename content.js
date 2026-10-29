@@ -251,6 +251,7 @@
     if (e.data.__louHelper === 'city-state') onCityState(e.data);
     if (e.data.__louHelper === 'movements') onMovements(e.data.data);
     if (e.data.__louHelper === 'cities-store' && capture.cities) onCitiesStore(e.data);
+    if (e.data.__louHelper === 'map-cities') onMapCities(e.data.cities);
     if (e.data.__louHelper === 'map-dungeons' && capture.dungeons) onMapDungeons(e.data.dungeons);
   });
 
@@ -274,8 +275,36 @@
       const q = c.queue || {};
       patch.queue = { count: q.count || 0, nextAt: q.nextAt ? q.nextAt - off : null, endsAt: q.endsAt ? q.endsAt - off : null, measuredAt: Date.now() };
       patch.troopsHome = Object.values(c.home || {}).reduce((a, n) => a + (n || 0), 0);
+      patch.wallLevel = c.wallLevel || 0;
+      patch.towers = c.towers || {};
       update('cities', key, patch, false);
     }
+  }
+
+  // Other players' cities seen on the map → "players" (name, alliance, cities).
+  let lastPlayersSig = '';
+  function onMapCities(list) {
+    if (!alive || !Array.isArray(list) || !list.length) return;
+    const sig = JSON.stringify(list.map((c) => [c.x, c.y, c.owner, c.tag, c.name]));
+    if (sig === lastPlayersSig) return;
+    lastPlayersSig = sig;
+    writeChain = writeChain.then(async () => {
+      if (!alive) return;
+      try {
+        const d = await chrome.storage.local.get('players');
+        const all = d.players || {};
+        const now = Date.now();
+        for (const c of list) {
+          const key = `${c.x}:${c.y}`;
+          // a city can change hands: drop it from its previous owner
+          for (const p of Object.values(all)) if (p.name !== c.owner && p.cities?.[key]) delete p.cities[key];
+          const p = all[c.owner] || (all[c.owner] = { name: c.owner, cities: {} });
+          p.tag = c.tag || null; p.id = c.ownerId || p.id || null; p.seenAt = now;
+          p.cities[key] = { key, x: c.x, y: c.y, name: c.name, score: c.score, water: c.water, castle: c.castle, seenAt: now };
+        }
+        await chrome.storage.local.set({ players: all });
+      } catch (e) { stop(e); }
+    });
   }
 
   function onMovements(data) {

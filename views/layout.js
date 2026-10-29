@@ -1,5 +1,6 @@
 import { esc, uid, fmtNum, fmtAgo } from '../lib/shared.js';
 import { openOptimizer } from './optimize-dialog.js';
+import { openBuildSteps } from './buildsteps.js';
 import { t, locale } from '../lib/i18n.js';
 import { ico, hasIcon, iconCount, ICON_TOTAL, missingIcons } from '../lib/icons.js';
 import {
@@ -232,6 +233,12 @@ export function mount(el, c) {
   root.querySelector('#l-side').addEventListener('input', (e) => { if (e.target.id === 'l-share') shareDraft = e.target.value; });
   root.querySelector('#l-side').addEventListener('click', async (e) => {
     const id = e.target.id;
+    if (id === 'l-steps' && cmpPlan()) {
+      // always go from the real city (game layout) to the plan
+      const o = cmpPlan(), swap = cur.source === 'game' && o.source !== 'game';
+      openBuildSteps(swap ? o : cur, swap ? cur : o, ctx.state);
+      return;
+    }
     if (id === 'l-copy') {
       const text = toShareString(cur);
       try { await navigator.clipboard.writeText(text); }
@@ -595,6 +602,7 @@ function drawSide() {
       <div class="small muted" style="margin-bottom:6px">${t('Rencana ini vs {n}', { n: `<b>${esc(other.name)}</b>` })}</div>
       <div class="small" style="margin-bottom:4px"><span class="dot add"></span> ${t('Perlu dibangun')}</div><div class="row">${list(add)}</div>
       <div class="small" style="margin:8px 0 4px"><span class="dot del"></span> ${t('Perlu dibongkar / dibersihkan')}</div><div class="row">${list(del)}</div>
+      <button class="btn sm primary" id="l-steps" style="margin-top:10px">📋 ${t('Langkah pembangunan')}</button>
     </div>`;
   }
 

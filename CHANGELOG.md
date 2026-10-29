@@ -4,6 +4,16 @@
 
 Made by **ardhie** (ardhie.andro@gmail.com).
 
+## v1.13.0 — 2026-10-29
+
+- 📈 Statistics tab: charts of raid loot per day, loot per city, total production, score, and troops per city (recorded automatically every hour).
+- 👥 Players tab: players & alliances seen on the map, relation status & notes, and incoming attack history per player.
+- 🔁 City Overview → Transfer: suggested resource shipments between cities (amount, carts, travel time).
+- 📋 Layout Planner → Build steps: ordered demolish/build/upgrade steps from the city to the plan, with cost & time.
+- Cheat Sheet → 🧱 Buildings: cost & build time per level (game data) with your city's construction speed; ⚔️ Battle: attack/defense simulator with the game rules.
+- Dungeons: marks dungeons being raided, estimated current explored %, a ⭐ Priority column, and max loot estimated from the game formula.
+- Two-row dashboard header so all tabs fit.
+
 ## v1.12.0 — 2026-10-29
 
 - 🎯 Raid Planner on the Dungeon tab: pick a city and the extension suggests the nearest dungeons that fit its troops, troops per dungeon (Revival formulas), loot per hour, and how many raids until 100% explored.

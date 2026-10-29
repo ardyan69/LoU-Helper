@@ -1,5 +1,6 @@
 import { RES, RES_LABEL, RES_ICON, projected, fullAt, emptyAt, fmtNum, fmtDur, fmtClock, fmtAgo, esc } from '../lib/shared.js';
 import { t, locale } from '../lib/i18n.js';
+import * as transfer from './transfer.js';
 
 let root, ctx, sortBy = 'full', sortDir = 1;
 let mode = (() => { try { return localStorage.getItem('lou.cityView') || 'cards'; } catch { return 'cards'; } })();
@@ -19,6 +20,7 @@ export function mount(el, c) {
           <button data-mode="cards" title="${t('Kartu per kota')}">🗂 ${t('Kartu')}</button>
           <button data-mode="list" title="${t('Satu baris per kota')}">☰ ${t('Tabel list')}</button>
           <button data-mode="detail" title="${t('Stok, kapasitas, %, produksi & waktu penuh per resource')}">▦ ${t('Tabel detail')}</button>
+          <button data-mode="transfer" title="${t('Rencana kirim resource antar-kota')}">🔁 ${t('Transfer')}</button>
         </div>
       </div>
       <label class="field">${t('Urutkan')}
@@ -44,6 +46,7 @@ export function mount(el, c) {
     try { localStorage.setItem('lou.cityView', mode); } catch { /* ignore */ }
     render(ctx.state);
   });
+  root.addEventListener('change', (e) => { if (mode === 'transfer') transfer.onInput(e, () => render(ctx.state)); });
   root.addEventListener('click', async (e) => {
     const th = e.target.closest('th[data-sort]');
     if (th) {
@@ -109,7 +112,8 @@ export function render(state) {
   list.sort((a, b) => cmp(sortKey(a, sortBy, pct, now), sortKey(b, sortBy, pct, now)) * sortDir);
   root.querySelectorAll('#c-mode [data-mode]').forEach((b) => b.classList.toggle('on', b.dataset.mode === mode));
   const el = root.querySelector('#c-list');
-  if (mode === 'list') el.innerHTML = tableList(list, pct, now);
+  if (mode === 'transfer') el.innerHTML = transfer.html(state);
+  else if (mode === 'list') el.innerHTML = tableList(list, pct, now);
   else if (mode === 'detail') el.innerHTML = tableDetail(list, pct, now);
   else el.innerHTML = `<div class="cities">${list.map((c) => card(c, pct, now)).join('')}</div>`;
 }

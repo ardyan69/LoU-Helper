@@ -5,7 +5,7 @@
 // Nothing here sends anything to the game server or changes the game.
 (() => {
   // versioned guard: a newer hook (after an extension update) may install next to an older one
-  const HOOK_V = 3;
+  const HOOK_V = 4;
   if ((window.__louHelperPageHookV || 0) >= HOOK_V) return;
   window.__louHelperPageHookV = HOOK_V;
   window.__louHelperPageHook = true;
@@ -130,6 +130,14 @@
         if (e.kind === 'dungeon' || e.kind === 'boss') dungeons.push({ kind: e.kind, type: e.dungeon || e.boss, level: e.level, progress: e.progress, x: e.x, y: e.y });
       }
       if (dungeons.length) post({ kind: 'map-dungeons', dungeons });
+      // other players' cities on the loaded map (for the Players tab)
+      const me = S.player && S.player.id;
+      const others = [];
+      for (const e of S.map.values()) {
+        if (!e || e.kind !== 'city' || !e.ownerName || (me && e.ownerId === me)) continue;
+        others.push({ x: e.x, y: e.y, name: e.name || null, owner: e.ownerName, ownerId: e.ownerId || null, tag: e.allianceTag || null, score: e.score ?? e.points ?? null, water: !!e.water, castle: !!e.castle });
+      }
+      if (others.length) post({ kind: 'map-cities', cities: others });
     }
     const cities = Object.values(S.cities || {});
     for (const c of cities) names.set(c.id, { kind: 'own', name: c.name, x: c.x, y: c.y });
@@ -151,10 +159,18 @@
       queue: (c.recruitQueue || []).map((q) => ({ unit: q.unit, count: q.count, done: q.doneCount || 0, perUnitMs: q.perUnitMs || 0, startAt: q.startAt || null }))
     }));
     const marketMine = ((S.market && S.market.mine) || []).map(plain).filter(Boolean);
-    const data = { serverOffset: S.serverOffset || 0, lang: (S.player && S.player.lang) || null, armies, incoming, incomingTrades, training, marketMine };
+    const P = S.player || {};
+    const data = { serverOffset: S.serverOffset || 0, lang: P.lang || null, player: P.name || null, research: P.research || null, worldSpeed: (S.world && S.world.speed) || 1, armies, incoming, incomingTrades, training, marketMine };
     const sig = JSON.stringify(data, (key, v) => (key === 'serverOffset' ? undefined : v));
     if (sig !== lastMovSig) { lastMovSig = sig; post({ kind: 'movements', data }); }
-    // language-independent city summary: resources (exact at resAt), build queue, troops at home
+    // towers & traps in the wall slots: { ranger_tower: [levels…], pitfall_trap: [...] }
+  const WALL_SLOT = /_tower$|_trap$|^barricade$/;
+  function wallSlots(c) {
+    const o = {};
+    for (const g of c.grid || []) if (g && g.b && g.lvl > 0 && WALL_SLOT.test(g.b) && g.b !== 'moonglow_tower') (o[g.b] = o[g.b] || []).push(g.lvl);
+    return o;
+  }
+  // language-independent city summary: resources (exact at resAt), build queue, troops at home
     const sum = cities.map((c) => {
       const q = Array.isArray(c.buildQueue) ? c.buildQueue : [];
       const first = q.find((o) => o.endAt) || null;
@@ -164,7 +180,7 @@
         id: c.id, name: c.name, x: c.x, y: c.y, cont: c.continent, water: !!c.water, castle: !!c.castle,
         res: c.res ? { wood: c.res.wood, stone: c.res.stone, iron: c.res.iron, food: c.res.food, gold: c.res.gold } : null,
         resAt: c.resAt || null, queue: { count: q.length, nextAt: first ? first.endAt : null, endsAt: end },
-        home: c.units || {}
+        home: c.units || {}, wallLevel: c.wallLevel || 0, towers: wallSlots(c)
       };
     });
     const cSig = JSON.stringify(sum.map((c) => [c.id, c.name, c.resAt, c.queue, c.home]));
