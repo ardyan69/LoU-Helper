@@ -1,0 +1,44 @@
+{
+  "manifest_version": 3,
+  "name": "LoU Revival Helper",
+  "short_name": "LoU Helper",
+  "version": "1.11.0",
+  "author": { "email": "ardhie.andro@gmail.com" },
+  "description": "Ringkasan kota, perencana layout, pergerakan pasukan & dungeon untuk Lord of Ultima: Revival. Dibuat oleh ardhie. Hanya membaca — tidak mengklik apa pun di game.",
+  "minimum_chrome_version": "111",
+  "permissions": ["storage", "alarms", "notifications", "scripting"],
+  "host_permissions": ["https://lordofultima.me/*"],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://lordofultima.me/*"],
+      "js": ["page-hook.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": ["https://lordofultima.me/*"],
+      "js": ["lib/i18n/content-dict.js", "content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "options_page": "dashboard.html",
+  "action": {
+    "default_title": "LoU Helper",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}
