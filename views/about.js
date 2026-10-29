@@ -1,7 +1,7 @@
 // "ℹ️ Tentang" — ReadMe, Credit, Change Log.
 import { esc } from '../lib/shared.js';
 import { CHANGELOG, CREDIT } from '../lib/changelog.js';
-import { t } from '../lib/i18n.js';
+import { t, getLang } from '../lib/i18n.js';
 
 let root, part = 'readme';
 const version = () => chrome.runtime.getManifest().version;
@@ -66,7 +66,8 @@ function readme() {
         <li>${t('Cadangkan data lewat Pengaturan → Ekspor cadangan.')}</li></ul></div>
       <div class="card"><h3>🔒 ${t('Keamanan &amp; privasi')}</h3><ul>
         <li>${t('<b>Membaca</b> data yang sudah ada di halaman game — tidak mengklik dan tidak mengotomasi aksi. Satu-satunya yang dikirim ke game: setelan minister dari 🎩 Set Ministers, hanya saat kamu klik Terapkan ke game dan mengonfirmasi.')}</li>
-        <li>${t('Semua data disimpan lokal di browser (chrome.storage); tidak ada yang dikirim ke server lain.')}</li></ul></div>
+        <li>${t('Semua data disimpan lokal di browser (chrome.storage); tidak ada yang dikirim ke server lain.')}</li>
+        <li><a href="privacy.html?lang=${getLang() === 'id' ? 'id' : 'en'}" target="_blank">📄 ${t('Kebijakan privasi lengkap')}</a></li></ul></div>
     </div>
   </div>`;
 }

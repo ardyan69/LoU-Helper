@@ -1,6 +1,6 @@
 import './lib/compat.js'; // must stay the first import (Firefox/Safari: chrome → browser)
 import { getAll, RES, RES_ICON, fullAt, emptyAt, fmtDur, fmtAgo, esc, trainingTimes } from './lib/shared.js';
-import { initLang, t } from './lib/i18n.js';
+import { initLang, t, getLang } from './lib/i18n.js';
 
 const GAME = 'https://lordofultima.me/';
 document.getElementById('p-ver').textContent = 'v' + chrome.runtime.getManifest().version;
@@ -13,6 +13,8 @@ document.addEventListener('click', async (e) => {
     const [t] = await chrome.tabs.query({ url: GAME + '*' });
     if (t) { await chrome.tabs.update(t.id, { active: true }); await chrome.windows.update(t.windowId, { focused: true }); }
     else await chrome.tabs.create({ url: GAME });
+  } else if (v === 'privacy') {
+    await chrome.tabs.create({ url: chrome.runtime.getURL('privacy.html') + '?lang=' + (getLang() === 'id' ? 'id' : 'en') });
   } else {
     await chrome.tabs.create({ url: chrome.runtime.getURL('dashboard.html') + '#' + v });
   }
@@ -35,6 +37,7 @@ async function checkAccess() {
 (async () => {
   await initLang();
   checkAccess();
+  document.getElementById('p-privacy').textContent = t('Privasi');
   const BTN = { kota: '🏰 ' + t('Kota'), layout: '📐 ' + t('Layout'), gerak: '🚩 ' + t('Gerak'), dungeon: '⚔️ Dungeon', game: t('Buka game') };
   document.querySelectorAll('.btns [data-open], .btn.primary[data-open]').forEach((b) => { if (BTN[b.dataset.open]) b.textContent = BTN[b.dataset.open]; });
   const { cities, settings, movements: mv } = await getAll();
