@@ -1,46 +1,50 @@
 # LoU Revival Helper (Chrome extension)
 
-Versi 1.11.0 · dibuat oleh **ardhie** · ardhie.andro@gmail.com
+🇬🇧 English · [Bahasa Indonesia](README.id.md)
 
-Alat bantu untuk **Lord of Ultima: Revival** (lordofultima.me):
+Version 1.11.1 · made by **ardhie** · ardhie.andro@gmail.com
 
-1. **Ringkasan Kota**: resource, kapasitas, produksi/jam, kapan gudang penuh atau makanan habis, dan status antrian bangunan semua kota. Dilengkapi notifikasi desktop.
-2. **Perencana Layout**: peta 21×21 yang sama dengan game (tembok, menara, jalan, Town Hall, kota air). Produksinya dihitung dengan rumus resmi game. Layout kota yang sedang aktif tersinkron otomatis dari game, lengkap dengan level asli dan antrian bangunan (share string dari City planner juga diterima). Ada **🧠 Rekomendasi** (optimizer yang menyusun bangunan produksi, pengolahan & Cottage di sekitar node alam untuk produksi terbesar: kayu/batu/besi/makanan maksimal, seimbang, atau rasio kustom; opsional boleh menghapus node alam bila tiap node menambah produksi di atas ambang), heatmap "petak terbaik", perbandingan rencana vs kota (apa yang perlu dibangun/dibongkar), level per bangunan, undo/redo, dan ekspor share string yang bisa langsung di-*Import* di game.
-3. **Pergerakan**: semua pasukan yang bergerak (raid/return/attack/support…, muatan, hitung mundur), ⚠️ serangan masuk (notifikasi desktop), konvoi dagang/Market (keluar, kembali, kiriman masuk), dan antrian pelatihan pasukan + pasukan di tiap kota.
-4. **Dungeon & Boss**: semua dungeon/boss yang dimuat peta Region tersimpan otomatis (level & explored %); guardians/max loot terisi saat panelnya dibuka. Ada filter, jarak ke kota terdekat, kalkulator raid (unit angkut, waktu tempuh, loot per jam), kalibrasi kecepatan unit, dan catatan/statistik raid.
-5. **📜 Cheat Sheet**: tab *Dungeons*, *Bosses*, *Recruit %*, *Troops Stats*, dan *Layouts* (layout kota militer Land & Sea/Water). Isinya jumlah pasukan minimum/rekomendasi untuk tiap tipe & level dungeon dan boss (dihitung dari rumus game Revival, termasuk Explored %), kalkulator raid & boss (kerugian, loot, peluang kill), kecepatan rekrut per unit, dan statistik semua unit. Tabel cheat sheet komunitas (LoU klasik) juga tersedia sebagai referensi.
+A helper for **Lord of Ultima: Revival** (lordofultima.me):
 
-## Cara pasang
-1. Ekstrak ZIP ke sebuah folder.
-2. Buka `chrome://extensions`, lalu nyalakan **Developer mode** (pojok kanan atas).
-3. Klik **Load unpacked**, lalu pilih folder `lou-helper`.
-4. Pin ikon kastil di toolbar. Buka/refresh tab game.
+1. **City Overview**: resources, capacity, production per hour, when the warehouse fills up or food runs out, and the build queue status of every city. Includes desktop notifications.
+2. **Layout Planner**: a 21×21 map identical to the game (walls, towers, roads, Town Hall, water cities). Production is calculated with the official game formulas. The active city's layout syncs automatically from the game, with real building levels and the build queue (share strings from the City planner are accepted too). Includes **🧠 Recommendation** (an optimizer that places production, processing buildings & Cottages around natural nodes for maximum output: max wood/stone/iron/food, balanced, or a custom ratio; optionally removes natural nodes when each node adds production above a threshold), a "best tiles" heatmap, plan vs city comparison (what to build/demolish), per-building levels, undo/redo, and share-string export that can be *Import*ed directly in the game.
+3. **Movements**: all moving armies (raid/return/attack/support…, cargo, countdown), ⚠️ incoming attacks (desktop notification), trade/Market convoys (outgoing, returning, incoming deliveries), and the troop training queue + troops in each city.
+4. **Dungeons & Bosses**: every dungeon/boss loaded on the Region map is saved automatically (level & explored %); guardians/max loot are filled in when its panel is opened. Includes filters, distance to the nearest city, a raid calculator (carrying units, travel time, loot per hour), unit speed calibration, and raid notes/statistics.
+5. **📜 Cheat Sheet**: *Dungeons*, *Bosses*, *Recruit %*, *Troops Stats*, and *Layouts* tabs (military city layouts, Land & Sea/Water). Minimum/recommended troops for every dungeon and boss type & level (calculated from the Revival game formulas, including Explored %), raid & boss calculators (losses, loot, kill chance), recruit speed per unit, and the stats of every unit. The community cheat sheet tables (classic LoU) are available as a reference too.
 
-## Cara pakai
-- **Data kota:** buka game dan pindah ke tiap kota sekali. Buka juga daftar kota (klik nama kota di kiri atas) supaya semua kota tercatat.
-- **Jam selesai antrian:** buka panel *Construction* sekali per kota.
-- **Dungeon:** tab *Region*, lalu klik ikon dungeon atau boss. Akan muncul pesan kecil "Disimpan".
-- **Layout kota:** otomatis untuk semua kota sekaligus. Layout-nya muncul di Perencana Layout sebagai "🏰 nama kota — kondisi di game" (hanya-baca). Klik *Duplikat* untuk membuat rencana yang bisa diedit.
-- Dashboard bisa dibuka lewat popup ikon extension, atau klik kanan ikon lalu pilih *Options*.
+## Installation
+1. Extract the ZIP into a folder.
+2. Open `chrome://extensions` and turn on **Developer mode** (top right).
+3. Click **Load unpacked** and select the `lou-helper` folder.
+4. Pin the castle icon in the toolbar. Open/refresh the game tab.
 
-## Bahasa
-Pengaturan → 🌐 Bahasa: Bahasa Indonesia, English, Español, Français, Deutsch, Italiano, Magyar, Ελληνικά, atau **Ikuti bahasa game** (otomatis memakai bahasa yang dipilih di game). Nama bangunan & istilah game tetap memakai nama dari game.
+To update: overwrite the folder with the new version, then click ↻ on the extension card.
 
-## Ikon bangunan
-Ikon & nama bangunan di Perencana Layout diambil dari game saat kamu membuka **Build bar**, **Guide → Your city & the grid** (node alam), dan panel **Town Hall**. Ikon disimpan lokal di browser (tidak dibundel di extension); sebelum tertangkap, emoji dipakai sebagai cadangan.
+## Usage
+- **City data:** open the game and switch to each city once. Also open the city list (click the city name at the top left) so all cities are recorded.
+- **Queue finish times:** open the *Construction* panel once per city.
+- **Dungeons:** on the *Region* tab, click a dungeon or boss icon. A small "Saved" message appears.
+- **City layouts:** synced automatically for all cities at once. They appear in the Layout Planner as "🏰 city name — in-game state" (read-only). Click *Duplicate* to make an editable plan.
+- The dashboard opens from the extension popup, or right-click the icon and choose *Options*.
 
-## Keamanan
-Extension ini hanya **membaca** data yang sudah ada di halaman game (teks di layar dan data kota yang sedang ditampilkan). Extension tidak mengklik apa pun, tidak mengirim perintah ke server game, dan tidak mengotomasi aksi. Semua data disimpan lokal di `chrome.storage` di browser kamu.
+## Language
+Settings → 🌐 Language: Bahasa Indonesia, English, Español, Français, Deutsch, Italiano, Magyar, Ελληνικά, or **Follow game language** (uses the language selected in the game). Building names & game terms keep the in-game names.
 
-## Catatan
-- Layout dari share string tidak membawa level (dianggap level 10); layout sinkron otomatis memakai level asli. Bonus riset diperkirakan dari produksi nyata kota.
-- Daya angkut dan kecepatan unit adalah **perkiraan** dari LoU klasik. Sesuaikan di tab Pengaturan atau pakai fitur kalibrasi.
-- Kalau tampilan game berubah (update), pembaca data mungkin perlu disesuaikan. Logikanya ada di `content.js`.
+## Building icons
+Building icons & names in the Layout Planner are taken from the game when you open the **Build bar**, **Guide → Your city & the grid** (natural nodes), and the **Town Hall** panel. Icons are stored locally in the browser (not bundled with the extension); until they are captured, emoji are used as a fallback.
+
+## Safety
+The extension only **reads** data that is already on the game page (on-screen text and the city data being displayed). It does not click anything, does not send commands to the game server, and does not automate actions. All data is stored locally in `chrome.storage` in your browser.
+
+## Notes
+- Layouts from a share string carry no levels (assumed level 10); auto-synced layouts use the real levels. Research bonuses are estimated from the city's real production.
+- Unit carry, base speed and power in Settings come from the Revival game data. Real speed can differ because of bonuses/server speed; use the calibration feature on the Dungeon tab.
+- If the game's interface changes (updates), the data readers may need adjusting. The logic lives in `content.js`.
 
 ## Credit
-- Dibuat oleh **ardhie** — ardhie.andro@gmail.com
-- Saran, laporan bug, atau ide fitur: kirim email dan sertakan versi extension.
-- LoU Revival Helper adalah alat buatan pemain dan tidak berafiliasi dengan pengembang *Lord of Ultima: Revival*. Nama game, ikon, dan aset lainnya milik pemiliknya masing-masing.
+- Made by **ardhie** — ardhie.andro@gmail.com
+- Suggestions, bug reports, or feature ideas: send an email and include the extension version.
+- LoU Revival Helper is a player-made tool and is not affiliated with the developers of *Lord of Ultima: Revival*. The game name, icons, and other assets belong to their respective owners.
 
 ## Change Log
-Lihat [CHANGELOG.md](CHANGELOG.md), atau tab **ℹ️ Tentang → 📝 Change Log** di dashboard.
+See [CHANGELOG.md](CHANGELOG.md) (Indonesian: [CHANGELOG.id.md](CHANGELOG.id.md)), or the **ℹ️ About → 📝 Change Log** tab in the dashboard.

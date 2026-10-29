@@ -54,8 +54,8 @@ export function render(state) {
       </div>
 
       <div class="card">
-        <div class="row"><h3 class="grow">${t('Unit')}</h3><button class="btn sm" data-reset="units">${t('Reset default')}</button></div>
-        <p>${t('Daya angkut &amp; kecepatan masih <b>perkiraan</b> — cocokkan dengan info unit di game, atau pakai fitur kalibrasi di tab Dungeon. Kekuatan relatif terhadap 1 Berserker (dari wiki LoU klasik).')}</p>
+        <div class="row"><h3 class="grow">${t('Unit')}</h3><button class="btn sm" data-reset="units">${t('Reset ke data game')}</button></div>
+        <p>${t('Nilai default diambil dari data game Revival: daya angkut, kecepatan dasar (menit per field), dan kekuatan = serangan ÷ 50 (relatif terhadap 1 Berserker). Kecepatan nyata bisa berbeda karena bonus atau kecepatan server — pakai fitur kalibrasi di tab Dungeon.')}</p>
         <table class="tbl-compact"><thead><tr><th>${t('Unit')}</th><th>${t('Daya angkut')}</th><th>${t('Menit/field')}</th><th>${t('Kekuatan')}</th></tr></thead>
         <tbody>${s.units.map((u, i) => `<tr>
           <td><input type="text" data-u="${i}.name" value="${esc(u.name)}"></td>

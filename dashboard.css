@@ -193,7 +193,7 @@ tr.sel { background: #d9a94b14 !important; }
 .settings .card p { margin: 0 0 10px; color: var(--muted); font-size: 12px; }
 .check { display: flex; gap: 8px; align-items: center; padding: 4px 0; }
 .tbl-compact td, .tbl-compact th { padding: 4px 6px; }
-.tbl-compact input[type=number] { width: 64px; }
+.tbl-compact input[type=number] { width: 76px; }
 .tbl-compact input[type=text] { width: 120px; }
 
 .toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: #2c2318; border: 1px solid var(--gold); padding: 8px 14px; border-radius: 8px; z-index: 50; opacity: 0; transition: opacity .25s; pointer-events: none; }

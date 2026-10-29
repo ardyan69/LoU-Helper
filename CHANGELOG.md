@@ -1,89 +1,96 @@
 # Change Log — LoU Revival Helper
 
-Dibuat oleh **ardhie** (ardhie.andro@gmail.com).
+🇬🇧 English · [Bahasa Indonesia](CHANGELOG.id.md)
+
+Made by **ardhie** (ardhie.andro@gmail.com).
+
+## v1.11.1 — 2026-10-29
+
+- Settings → Units now use real Revival game data: carry, base speed (minutes/field), and power (attack ÷ 50); Sloop, Frigate and War Galleon added. Old settings are upgraded automatically (calibrated speeds are kept).
+- README.md and CHANGELOG.md are now in English (Indonesian versions: README.id.md, CHANGELOG.id.md).
 
 ## v1.11.0 — 2026-10-29
 
-- Cheat Sheet: tab baru 🏗️ Layouts (Land & Sea / Water) berisi layout kota militer komunitas per unit & target waktu rekrut, dengan link cotgopt.com.
-- Kolom ⚙️ Revival: perkiraan waktu rekrut per unit & waktu isi penuh TS di Revival untuk tiap layout.
+- Cheat Sheet: new 🏗️ Layouts tab (Land & Sea / Water) with community military city layouts per unit & target recruit time, with cotgopt.com links.
+- ⚙️ Revival column: estimated recruit time per unit & time to fill the whole TS in Revival for each layout.
 
 ## v1.10.1 — 2026-10-29
 
-- Cheat Sheet → Recruit %: tabel Rumus game dipecah per kelompok unit dengan rentang waktu yang bisa dicapai (seperti tabel komunitas).
-- Nama unit di tabel komunitas disamakan dengan nama di game (Vanquisher → Berserker, Triari → Guardian, dst.).
+- Cheat Sheet → Recruit %: the Game formulas table is split per unit group with reachable time ranges (like the community tables).
+- Unit names in the community tables now match the in-game names (Vanquisher → Berserker, Triari → Guardian, etc.).
 
 ## v1.10.0 — 2026-10-29
 
-- Tab baru 📜 Cheat Sheet: Dungeons, Bosses, Recruit %, dan Troops Stats.
-- Jumlah pasukan minimum/rekomendasi untuk tiap tipe & level dungeon dan boss, dihitung dari rumus game Revival (kekuatan, max loot, explored %, kelemahan).
-- Kalkulator raid & boss: kerugian, loot, gold, peluang kill, dan tambahan explored.
-- Recruit %: waktu rekrut per unit sesuai recruit speed % kotamu, dan % yang dibutuhkan untuk target waktu.
-- Tabel cheat sheet komunitas (LoU klasik) tetap tersedia sebagai referensi.
-- Daya angkut default Guardian diperbaiki menjadi 20 (sesuai game).
+- New tab 📜 Cheat Sheet: Dungeons, Bosses, Recruit %, and Troops Stats.
+- Minimum/recommended troops for every dungeon and boss type & level, calculated from the Revival game formulas (strength, max loot, explored %, weakness).
+- Raid & boss calculator: losses, loot, gold, kill chance, and explored gain.
+- Recruit %: recruit time per unit for your city's recruit speed %, and the % needed for a target time.
+- The community cheat sheet tables (classic LoU) are still available as a reference.
+- Default Guardian carry capacity fixed to 20 (as in the game).
 
 ## v1.9.0 — 2026-10-29
 
-- Pilihan bahasa di Pengaturan: Bahasa Indonesia, English, Español, Français, Deutsch, Italiano, Magyar, Ελληνικά, atau ikuti bahasa game.
-- Dashboard, popup, notifikasi desktop, dan pesan di game ikut bahasa yang dipilih.
+- Language options in Settings: Bahasa Indonesia, English, Español, Français, Deutsch, Italiano, Magyar, Ελληνικά, or follow the game language.
+- Dashboard, popup, desktop notifications, and in-game messages follow the selected language.
 
 ## v1.8.0 — 2026-10-29
 
-- Tab baru ℹ️ Tentang: ReadMe, Credit, dan Change Log.
-- Versi extension tampil di header dashboard & popup.
+- New ℹ️ About tab: ReadMe, Credit, and Change Log.
+- Extension version shown in the dashboard & popup header.
 
 ## v1.7.0 — 2026-10-29
 
-- Tab 🚩 Pergerakan: semua pasukan yang bergerak (misi, muatan, hitung mundur), ⚠️ serangan masuk, konvoi dagang/Market, dan antrian pelatihan pasukan.
-- Notifikasi desktop: serangan masuk, pelatihan selesai, kiriman dagang tiba.
-- Layout semua kota tersinkron sekaligus (tidak perlu pindah kota).
-- Semua dungeon & boss di peta Region otomatis masuk ke tab Dungeon.
-- Popup: peringatan serangan masuk & ringkasan pergerakan.
+- 🚩 Movements tab: all moving troops (mission, cargo, countdown), ⚠️ incoming attacks, trade convoys/Market, and troop training queues.
+- Desktop notifications: incoming attacks, training finished, trade shipments arrived.
+- All city layouts synced at once (no need to switch cities).
+- All dungeons & bosses on the Region map are added to the Dungeon tab automatically.
+- Popup: incoming attack warnings & movement summary.
 
 ## v1.6.1 — 2026-10-29
 
-- Pesan di game saat ikon baru berhasil disimpan.
+- In-game message when a new icon is saved successfully.
 
 ## v1.6.0 — 2026-10-29
 
-- Ikon bangunan & node alam memakai ikon asli dari game (Build bar, Guide, panel Town Hall), disimpan lokal.
-- Nama bangunan & node memakai bahasa Inggris seperti di game (Forest, Rocks, Ore Deposit, Lake).
+- Building & natural node icons use the original game icons (Build bar, Guide, Town Hall panel), stored locally.
+- Building & node names use English as in the game (Forest, Rocks, Ore Deposit, Lake).
 
 ## v1.5.0 — 2026-10-29
 
-- 🧠 Rekomendasi: opsi hapus node alam bila tiap node menambah produksi di atas ambang.
+- 🧠 Recommendation: option to remove natural nodes when each node adds production above the threshold.
 
 ## v1.4.0 — 2026-10-29
 
-- 🧠 Rekomendasi penempatan otomatis: bangunan produksi, pengolahan & Cottage untuk produksi terbesar (maks per resource, seimbang, atau rasio kustom).
-- Perbandingan hasil vs kondisi sekarang pada level yang sama.
+- 🧠 Automatic placement recommendation: production, processing & Cottage buildings for maximum production (max per resource, balanced, or custom ratio).
+- Result vs current state compared at the same level.
 
 ## v1.3.0 — 2026-10-29
 
-- Layout kota tersinkron otomatis dari game, lengkap dengan level asli & antrian bangunan.
-- Layout "kondisi di game" hanya-baca; Duplikat langsung dibandingkan dengan kota asli.
-- Perkiraan bonus riset kota dari produksi nyata.
-- Jam selesai antrian bangunan terbaca otomatis di Ringkasan Kota.
+- City layouts synced automatically from the game, complete with actual levels & building queue.
+- The "in-game state" layout is read-only; Duplicate compares directly with the actual city.
+- City research bonus estimated from actual production.
+- Building queue finish times are read automatically in City Overview.
 
 ## v1.2.1 — 2026-10-29
 
-- Perbaikan tampilan kartu kota di popup.
+- Fixed city card display in the popup.
 
 ## v1.2.0 — 2026-10-29
 
-- Ringkasan Kota: pilihan tampilan Kartu, Tabel list, dan Tabel detail (bisa diurutkan per kolom).
+- City Overview: choose between Cards, List table, and Detail table views (sortable by column).
 
 ## v1.1.1 — 2026-10-29
 
-- Setelah update, pembaca data dipasang ulang otomatis ke tab game (tidak perlu refresh).
-- Banner peringatan bila data kota tidak terupdate.
+- After an update, the data reader is re-attached to the game tab automatically (no refresh needed).
+- Warning banner when city data is not updating.
 
 ## v1.1.0 — 2026-10-29
 
-- Perencana Layout v2: peta 21×21 sama dengan game (tembok, jalan, Town Hall, kota air).
-- Produksi dihitung dengan rumus resmi game; heatmap petak terbaik; bandingkan rencana; undo/redo.
-- Impor/ekspor share string (LoU City Planner) — bisa langsung di-Import di game.
+- Layout Planner v2: 21×21 map identical to the game (walls, roads, Town Hall, water cities).
+- Production calculated with the game's official formulas; best-tile heatmap; compare plans; undo/redo.
+- Import/export share strings (LoU City Planner) — can be imported directly in the game.
 
 ## v1.0.0 — 2026-10-29
 
-- Rilis pertama: Ringkasan Kota (resource, kapasitas, kapan gudang penuh, antrian), Perencana Layout, pelacak Dungeon & kalkulator raid.
-- Notifikasi desktop gudang penuh / makanan habis / antrian selesai.
+- First release: City Overview (resources, capacity, when warehouses fill, queues), Layout Planner, Dungeon tracker & raid calculator.
+- Desktop notifications for full warehouse / food running out / queue finished.

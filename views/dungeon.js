@@ -219,7 +219,7 @@ function renderCalcHead() {
   const weak = (d.weakTo || '').toLowerCase();
   // preselect a unit that matches "weak to"
   const units = ctx.state.settings.units;
-  const prefer = weak.includes('cav') ? ['knight', 'paladin'] : weak.includes('mag') ? ['mage', 'warlock'] : weak.includes('inf') ? ['berserker', 'ranger', 'templar'] : weak.includes('art') || weak.includes('siege') ? [] : [];
+  const prefer = weak.includes('cav') ? ['knight', 'paladin'] : weak.includes('mag') ? ['mage', 'warlock'] : weak.includes('inf') ? ['berserker', 'ranger', 'templar'] : weak.includes('art') || weak.includes('siege') || d.type === 'Sea' ? ['frigate', 'sloop', 'war_galleon'] : [];
   const idx = units.findIndex((u) => prefer.includes(u.id));
   if (idx >= 0) root.querySelector('#c-unit').value = idx;
   syncMpf();
