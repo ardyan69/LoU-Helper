@@ -384,3 +384,17 @@ dialog.cmpdlg { width: min(1000px, 96vw); }
 .good-t { color: var(--good); }
 dialog.tpldlg, dialog.cmpdlg { max-height: 92vh; overflow: auto; }
 .tpldlg .minimap { max-width: 320px; }
+
+/* Plan result → military */
+.milres { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); }
+.milres .mil-grp { margin-top: 6px; font-weight: 600; }
+.milres .mil-grp > span:last-child { white-space: nowrap; }
+.milres .mil-grp img, .milres .mil-grp .gi { width: 18px; height: 18px; vertical-align: middle; }
+.milres .kvt { margin-top: 2px; }
+.milres .kvt td { vertical-align: top; }
+.milres .kvt td:first-child { padding-left: 22px; white-space: normal; }
+.milres .kvt .small { font-size: 11px; line-height: 1.3; }
+.milres .kvt tr.muted td { opacity: .6; }
+.cmpcost { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--line); }
+.cmpcost .kv { font-size: 12.5px; }
+.cs-tbl td .sub, .cs-tbl td.sub { padding-left: 14px; color: var(--muted); }

@@ -2,7 +2,7 @@
 
 🇮🇩 Bahasa Indonesia · [English](README.md)
 
-Versi 1.14.1 · dibuat oleh **ardhie** · ardhie.andro@gmail.com
+Versi 1.15.0 · dibuat oleh **ardhie** · ardhie.andro@gmail.com
 
 Alat bantu untuk **Lord of Ultima: Revival** (lordofultima.me):
 
@@ -56,6 +56,12 @@ Extension ini hanya **membaca** data yang sudah ada di halaman game (teks di lay
 - Emas di Revival dihitung per akun (setiap kota menampilkan total semua kota), jadi tidak dijumlahkan per kota.
 - Data kota dibaca tanpa bergantung bahasa game: resource, antrian, dan pasukan semua kota dari data game; produksi/jam & kapasitas dari resource bar kota aktif.
 - Kalau tampilan game berubah (update), pembaca data mungkin perlu disesuaikan. Logikanya ada di `content.js`.
+
+## Pengembangan
+Tanpa build step dan tanpa dependency. Dengan Node 18+:
+
+- `node --test tests/*.test.mjs` — tes rumus game (produksi, kapasitas, troop space, recruit %), template layout, dan urutan bangun.
+- `node tests/i18n-check.mjs` — semua teks UI harus ada di semua file bahasa (`--unused` juga menampilkan key yang tidak lagi ditemukan di kode).
 
 ## Credit
 - Dibuat oleh **ardhie** — ardhie.andro@gmail.com

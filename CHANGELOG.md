@@ -4,6 +4,17 @@
 
 Made by **ardhie** (ardhie.andro@gmail.com).
 
+## v1.15.0 — 2026-10-29
+
+- 📋 Smarter build steps: Cottages first when the time saved is larger, the Town Hall only when needed (level & slot requirements), then the step with the largest gain per hour; old buildings are demolished right before their tile is used; times use the construction speed that rises along the way, plus a Gain column and a comparison with the usual order.
+- ⚖️ The Comparison card shows the total cost & build time from the city to the plan; the side-by-side table shows the recruit time of each unit.
+- 🧩 Templates: a second unit group with a % share, hybrid economy slots (Cottage & Warehouse; hub: Cottage), the mini map marks changed tiles, and the calculation runs in the background with a progress bar & Cancel button.
+- 🧪 Automatic tests for game formulas, templates & build order (node --test tests/*.test.mjs), and a translation check (node tests/i18n-check.mjs).
+
+## v1.14.2 — 2026-10-29
+
+- ⚔️ Layout Planner → Plan result: when the plan has military buildings, it shows Troop space (TS), recruit speed % per recruitment building group (including bordering Barracks), and the recruit time of each unit (e.g. Training Ground → Berserker, Ranger, Guardian) with the time to fill TS; locked units show the building level they need.
+
 ## v1.14.1 — 2026-10-29
 
 - 🧩 Better military & hub templates: layouts are searched much more thoroughly (higher recruit % and storage), building slots default to 100 (Town Hall L10) instead of the city's current slots, extra Barracks beyond the TS target when they raise recruit %, an option to remove natural nodes, and Harbors for hubs in water cities.

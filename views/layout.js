@@ -1,9 +1,14 @@
 import { esc, uid, fmtNum, fmtAgo } from '../lib/shared.js';
 import { openOptimizer } from './optimize-dialog.js';
 import { openBuildSteps } from './buildsteps.js';
+import { planSteps } from '../lib/buildorder.js';
+import { citySpeed, fmtT } from './cs-buildings.js';
 import { openTemplates, openCompare } from './layout-tools.js';
 import { t, locale } from '../lib/i18n.js';
 import { ico, hasIcon, iconCount, ICON_TOTAL, missingIcons } from '../lib/icons.js';
+import { troopSpace, GROUP_CODES } from '../lib/templates.js';
+import { cityRecruitPct, RECRUIT_CODES, RECRUIT_GROUPS, unitById, recruitTime } from '../lib/cheatsheet.js';
+import { BUILDINGS } from '../lib/gamedata.js';
 import {
   N, TOWNHALL, B, zone, isBuilding, isNode, neighbours, blank, migrate, parseShareString, toShareString,
   cityStats, producerOutput, warehouseOutput, townhouseOutput, hideoutOutput, warnings
@@ -600,6 +605,66 @@ function linkedCity() {
   return cur?.cityKey ? ctx.state.cities[cur.cityKey] : null;
 }
 
+// ⚔️ military part of "Plan result": troop space, recruit speed % per recruitment building group, recruit time per unit
+const MIL_CODES = ['B', 'K', 'G', 'E', 'J', 'Z', 'Y', 'V', 'X'];
+const fsec = (x) => (x < 60 ? `${x.toFixed(x < 10 ? 2 : 1)} s` : fmtT(x));
+const fullNum = (x) => Math.round(x).toLocaleString(locale());
+function milResult(p) {
+  if (![...p.cells].some((c) => MIL_CODES.includes(c))) return '';
+  const lvl = (i) => Math.min(10, Math.max(1, p.levels?.[i] || 10));
+  let nBar = 0, castleLvl = 0;
+  for (let i = 0; i < N * N; i++) {
+    if (p.cells[i] === 'B') nBar++;
+    if (p.cells[i] === 'X') castleLvl = Math.max(castleLvl, lvl(i));
+  }
+  const ts = troopSpace(p);
+  const castlePct = castleLvl ? BUILDINGS.castle.eff[castleLvl - 1] : 0;
+  const rec = cityRecruitPct(p);
+  const groups = RECRUIT_CODES.map((c, g) => ({ c, o: rec[g], units: RECRUIT_GROUPS[g].units.map(unitById) })).filter((x) => x.o.n);
+  const tsNote = [nBar ? `${nBar}× Barracks` : '', castlePct ? `Castle +${castlePct}%` : ''].filter(Boolean).join(' · ');
+  return `<div class="milres">
+      <div class="kv"><span>⛺ ${t('Troop space')} (TS)</span><b class="num">${fullNum(ts)}</b></div>
+      ${tsNote ? `<div class="kv small muted"><span></span><span>${tsNote}</span></div>` : ''}
+      ${groups.map(({ c, o, units }) => `
+        <div class="kv mil-grp"><span>${ico(c)} ${esc(GROUP_CODES[c])} ×${o.n}</span><span class="num"${o.barracks ? ` title="${t('{n} sisi Barracks', { n: o.barracks })}"` : ''}>${t('Kecepatan')} <b>+${fullNum(o.pct)}%</b></span></div>
+        <table class="kvt">${units.map((u) => {
+          const need = o.maxLvl < u.lvl ? t('butuh {b} L{n}', { b: esc(GROUP_CODES[c]), n: u.lvl }) : u.castle && !castleLvl ? t('butuh Castle') : '';
+          const sec = recruitTime(u.sec, o.pct);
+          const sub = need ? `🔒 ${need}` : u.space > 0 && ts > 0 ? `<span title="${t('Waktu mengisi seluruh TS dengan unit ini')}">${t('isi TS {h}', { h: fmtT((ts / u.space) * sec) })}</span>` : '';
+          return `<tr${need ? ' class="muted"' : ''}><td>${esc(u.name)}${sub ? `<div class="small muted">${sub}</div>` : ''}</td><td><b>${fsec(sec)}</b></td></tr>`;
+        }).join('')}</table>`).join('')}
+      ${groups.length ? `<div class="small muted" style="margin-top:4px">${t('Waktu rekrut per unit dari bangunan di rencana ini (belum termasuk bonus riset).')}</div>` : ''}
+    </div>`;
+}
+
+// total cost & build time (smart order) from the real city to the plan — computed after a short pause, cached
+let costKey = '', costVal = null, costT = null;
+function costPair(other) {
+  const swap = cur.source === 'game' && other.source !== 'game';
+  return swap ? [other, cur] : [cur, other];
+}
+function costHtml(other) {
+  const [plan, base] = costPair(other);
+  const key = plan.cells + plan.levels.join() + '|' + base.cells + base.levels.join();
+  if (key === costKey && costVal) {
+    const v = costVal.total, RKS = ['wood', 'stone', 'iron', 'food', 'gold'];
+    const used = RKS.filter((r) => v.cost[r] > 0);
+    if (!costVal.steps.length) return '';
+    return `<div class="kv"><span>💰 ${t('Total biaya')}</span><span class="num">${used.map((r) => `${r === 'gold' ? '🪙' : RES_I[r]}${fmtNum(v.cost[r])}`).join(' ') || '—'}</span></div>
+      <div class="kv"><span>⏱️ ${t('Total waktu bangun')}</span><b class="num">${fmtT(v.time)}</b></div>
+      <div class="kv muted"><span>🏡 ${t('Kecepatan bangun')}</span><span class="num">${fmtNum(v.startSpeed)}% → ${fmtNum(v.endSpeed)}%</span></div>`;
+  }
+  clearTimeout(costT);
+  costT = setTimeout(() => {
+    const [p2, b2] = costPair(other);
+    costVal = planSteps(p2, b2, { researchPct: citySpeed(ctx.state, null) });
+    costKey = p2.cells + p2.levels.join() + '|' + b2.cells + b2.levels.join();
+    const el = root?.querySelector('#l-cmpcost');
+    if (el && cmpPlan() === other) el.innerHTML = costHtml(other);
+  }, 350);
+  return '';
+}
+
 function drawSide() {
   const side = root.querySelector('#l-side');
   if (!cur) { side.innerHTML = `<div class="card">${t('Belum ada rencana.')}</div>`; return; }
@@ -628,6 +693,7 @@ function drawSide() {
       <div class="small muted" style="margin-bottom:6px">${t('Rencana ini vs {n}', { n: `<b>${esc(other.name)}</b>` })}</div>
       <div class="small" style="margin-bottom:4px"><span class="dot add"></span> ${t('Perlu dibangun')}</div><div class="row">${list(add)}</div>
       <div class="small" style="margin:8px 0 4px"><span class="dot del"></span> ${t('Perlu dibongkar / dibersihkan')}</div><div class="row">${list(del)}</div>
+      <div id="l-cmpcost" class="cmpcost small">${costHtml(other) || `<span class="muted">${t('Menghitung biaya & waktu…')}</span>`}</div>
       <button class="btn sm primary" id="l-steps" style="margin-top:10px">📋 ${t('Langkah pembangunan')}</button>
     </div>`;
   }
@@ -648,6 +714,7 @@ function drawSide() {
       <div class="kv"><span>📦 ${t('Kapasitas warehouse')}</span><span class="num small">${RES.map((r) => `${RES_I[r]}${fmtNum(st.store[r])}`).join(' ')}</span></div>
       <div class="kv"><span>🕳️ Hideout</span><span class="num">${fmtNum(st.hide)}</span></div>
       <div class="kv"><span>🏡 ${t('Kecepatan bangun')}</span><span class="num">+${st.speed}%</span></div>
+      ${milResult(cur)}
       <div class="small muted" style="margin-top:6px">${fac
         ? `${t('Angka kuning = perkiraan dengan bonus kota {c} (riset dll.), dihitung dari produksi nyata vs layout game-nya:', { c: esc(city.name) })} ${RES.map((r) => fac[r] ? `${RES_I[r]}${pctTxt(fac[r])}` : '').join(' ')}`
         : t('Angka dasar, belum termasuk bonus riset &amp; artefak. Buka kota terkait di game supaya bonusnya bisa dihitung.')}</div>

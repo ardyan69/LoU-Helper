@@ -2,7 +2,7 @@
 
 🇬🇧 English · [Bahasa Indonesia](README.id.md)
 
-Version 1.14.1 · made by **ardhie** · ardhie.andro@gmail.com
+Version 1.15.0 · made by **ardhie** · ardhie.andro@gmail.com
 
 A helper for **Lord of Ultima: Revival** (lordofultima.me):
 
@@ -58,6 +58,12 @@ The extension only **reads** data that is already on the game page (on-screen te
 - Gold is account-wide in Revival (every city shows the total of all cities), so it is never summed over cities.
 - City data is read language-independently: resources, build queue and troops of all cities come from the game data; production/h and capacity from the resource bar of the active city.
 - If the game's interface changes (updates), the data readers may need adjusting. The logic lives in `content.js`.
+
+## Development
+No build step and no dependencies. With Node 18+:
+
+- `node --test tests/*.test.mjs` — tests for the game formulas (production, storage, troop space, recruit %), layout templates and the build order.
+- `node tests/i18n-check.mjs` — every UI text must exist in all language files (`--unused` also lists keys no longer found in the code).
 
 ## Credit
 - Made by **ardhie** — ardhie.andro@gmail.com

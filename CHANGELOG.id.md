@@ -4,6 +4,17 @@
 
 Dibuat oleh **ardhie** (ardhie.andro@gmail.com).
 
+## v1.15.0 — 2026-10-29
+
+- 📋 Langkah pembangunan lebih pintar: Cottage dulu bila waktu yang dihemat lebih besar, Town Hall dinaikkan hanya saat dibutuhkan (syarat level & slot), lalu langkah dengan tambahan terbesar per jam; bangunan lama dibongkar tepat sebelum petaknya dipakai; waktu dihitung dengan kecepatan bangun yang naik selama proses, plus kolom Tambahan dan perbandingan dengan urutan biasa.
+- ⚖️ Kartu Perbandingan menampilkan total biaya & waktu bangun dari kota ke rencana; tabel Bandingkan berdampingan menampilkan waktu rekrut tiap unit.
+- 🧩 Template: kelompok unit kedua dengan porsi %, slot ekonomi hybrid (Cottage & Warehouse; hub: Cottage), peta mini menandai petak yang berubah, dan perhitungan berjalan di latar belakang dengan progress bar & tombol Batal.
+- 🧪 Tes otomatis untuk rumus game, template & urutan bangun (node --test tests/*.test.mjs), dan pengecekan terjemahan (node tests/i18n-check.mjs).
+
+## v1.14.2 — 2026-10-29
+
+- ⚔️ Perencana Layout → Hasil rencana: bila ada bangunan militer, tampil Troop space (TS), kecepatan rekrut % per kelompok bangunan rekrut (termasuk Barracks yang menempel), dan waktu rekrut tiap unit (mis. Training Ground → Berserker, Ranger, Guardian) beserta waktu mengisi TS; unit yang belum terbuka diberi tanda level bangunan yang dibutuhkan.
+
 ## v1.14.1 — 2026-10-29
 
 - 🧩 Template militer & hub lebih maksimal: susunan dihitung ulang dengan pencarian yang jauh lebih teliti (recruit % dan kapasitas gudang naik), slot bangunan default 100 (Town Hall L10) — tidak lagi terbatas slot kota saat ini, Barracks ditambah di atas target TS bila menaikkan recruit %, opsi hapus node alam, dan Harbor untuk hub di kota air.
