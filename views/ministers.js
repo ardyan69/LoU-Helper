@@ -36,15 +36,28 @@ const WHY = {
   'def-none': mark('Kota ini belum bisa merekrut unit bertahan.'),
   'no-layout': mark('Layout kota belum tersinkron — buka kota ini di game.'),
   'war-none': mark('Tidak ada unit raid di kota — raid otomatis dimatikan.'),
-  'war-level': mark('Level maks = level dungeon tertinggi yang masih dibersihkan pasukan raid (dungeon terkuat untuk unitmu, 0%).'),
+  'war-level': mark('Level maks dipilih supaya maksimal 5 raid sekaligus memakai hampir semua pasukan raid — minister hanya mengirim secukupnya untuk membersihkan dungeon, jadi loot naik dengan pasukan yang terpakai.'),
+  'war-attacked': mark('Ada serangan masuk ke kota ini — raid otomatis dimatikan dulu supaya pasukan ada di rumah.'),
+  'war-offense-only': mark('Kota garis depan: hanya unit penyerang (Berserker, Knight, Mage, Warlock) yang raid; unit bertahan tetap di rumah.'),
+  'war-weak': mark('Pasukan raid belum cukup untuk dungeon level 1 — raid otomatis dimatikan.'),
+  'war-food': mark('Makanan kota minus — pasukan yang sedang raid tidak makan, jadi semua ikut raid.'),
+  'war-cap': mark('Belum ada dungeon level setinggi itu yang tercatat dalam 60 field — level maks disesuaikan ke L{l}, level tertinggi yang ada di sekitar.'),
+  'war-info': mark('≈ {a} raid sekaligus · {u}% pasukan raid terpakai · ±{l} loot/jam · {n} dungeon cocok tercatat.'),
   'war-front': mark('Sisakan 30% di rumah: kota garis depan.'),
   'war-all': mark('Kota militer: semua pasukan menganggur ikut raid.'),
   'war-keep': mark('Sisakan 10% di rumah.'),
-  'war-radius': mark('Radius mencakup ±12 dungeon terdekat yang cocok.'),
+  'war-radius': mark('Radius mencakup ±3 dungeon per raid di sekitar level maks (maks−2 … maks).'),
   'war-radius-default': mark('Belum ada data dungeon di sekitar — radius 20.'),
   'trade-hub': mark('Hub: tanpa target, menyimpan kelebihan untuk permintaan kota lain.'),
   'trade-eco': mark('Target 40% kapasitas; kekurangan diminta dari hub, kelebihan dikirim ke hub.'),
-  'trade-mil': mark('Kota militer: besi 60% & makanan (≥ 24 jam makan pasukan) diminta dari hub; kayu & batu 20%.'),
+  'trade-mil': mark('Kota militer: besi 60%, kayu & batu 20%, diminta dari hub; kelebihan disimpan.'),
+  'trade-food': mark('Target makanan ≥ 24 jam makan pasukan saat TS penuh ({n}).'),
+  'trade-hub-info': mark('Hub untuk {n} kota lain di benua ini · {c} gerobak.'),
+  'trade-carts': mark('Hub baru punya {n} gerobak — tambah Marketplace supaya kiriman tidak antre.'),
+  'trade-alone': mark('Sendirian di benua ini dan tanpa kapal — tidak ada kota untuk diminta; kelebihan disimpan.'),
+  'trade-purify': mark('Moonglow Tower L10: kelebihan dimurnikan.'),
+  'trade-sea': mark('Tidak ada hub di benua ini — minta lewat laut dari hub dengan kapal terbanyak.'),
+  'trade-dist': mark('Minta dari {c} · jarak {d} field.'),
   'trade-new': mark('Kota baru: kayu & batu 60% untuk membangun, diminta dari hub.')
 };
 const ROLE = { military: '⚔️', hub: '📦', economy: '🌾', new: '🌱', unknown: '❔' };
@@ -150,12 +163,13 @@ async function onClick(e) {
       const r = recTrade(st(), cities);
       for (const c of cities) if (r.settings.cities[c.id]) { setDraft('trade', c, r.settings.cities[c.id]); ms.why[`trade:${c.id}`] = r.why[c.id] || []; }
       ms.minShipment = r.settings.minShipment;
+      ms.tradeHubs = Object.entries(r.hubs || {}).map(([cont, h]) => `C${String(cont).padStart(2, '0')} → ${h.c.name}`);
     } else for (const c of cities) recommend(key, c);
     persist(); draw(); ctx.toast(t('Rekomendasi diisi — periksa lalu klik "Terapkan ke game".'));
     return;
   }
   if (a === 'rec') { const c = cities.find((x) => x.id === e.target.closest('[data-cid]').dataset.cid); if (key === 'trade') { const r = recTrade(st(), cities); if (r.settings.cities[c.id]) { setDraft('trade', c, r.settings.cities[c.id]); ms.why[`trade:${c.id}`] = r.why[c.id] || []; } if (r.settings.minShipment) ms.minShipment = r.settings.minShipment; } else recommend(key, c); persist(); draw(); return; }
-  if (a === 'reset') { ms.draft[key] = {}; if (key === 'trade') ms.minShipment = null; for (const k of Object.keys(ms.why)) if (k.startsWith(key + ':')) delete ms.why[k]; if (key === 'build') ms.plan = {}; persist(); draw(); return; }
+  if (a === 'reset') { ms.draft[key] = {}; if (key === 'trade') { ms.minShipment = null; ms.tradeHubs = null; } for (const k of Object.keys(ms.why)) if (k.startsWith(key + ':')) delete ms.why[k]; if (key === 'build') ms.plan = {}; persist(); draw(); return; }
   if (a === 'apply') return apply(key);
   if (a === 'toggle') {
     const k = e.target.closest('[data-key]').dataset.key, on = !ministersOf(st())?.[k]?.enabled;
@@ -184,13 +198,27 @@ async function send(msgs, onDone) {
   catch { res = { ok: false, error: 'no-content' }; }
   busy = false;
   if (!res?.ok) { alert(res?.error === 'no-content' ? t('Tab game perlu di-refresh (F5) sekali setelah update extension.') : t('Tidak ada jawaban dari tab game. Coba lagi.')); draw(); return []; }
+  applyLocal(msgs, res.results);
   const bad = res.results.filter((r) => !r.ok);
   if (bad.length) {
-    const why = bad.map((r) => (r.error === 'no-socket' ? t('koneksi game belum siap — tunggu beberapa detik (atau F5 tab game) lalu coba lagi') : r.error)).join('\n');
+    const why = bad.map((r) => (r.error === 'no-socket' ? t('koneksi game belum siap — tunggu beberapa detik (atau F5 tab game) lalu coba lagi') : r.error === 'timeout' ? t('game tidak menjawab dalam 8 detik — cek di layar Ministers game, lalu coba lagi bila belum berubah') : r.error)).join('\n');
     alert(t('{n} dari {m} setelan ditolak game:', { n: bad.length, m: res.results.length }) + '\n' + why);
   } else onDone?.();
   draw();
   return res.results;
+}
+// show what the game accepted right away (the game's own data confirms it a moment later)
+function applyLocal(msgs, results) {
+  const mv = st().movements;
+  if (!mv?.ministers) return;
+  const M = structuredClone(mv.ministers);
+  msgs.forEach((m, i) => {
+    if (!results[i]?.ok) return;
+    if (m.t === 'ministerToggle') M[m.key] = { ...(M[m.key] || {}), enabled: m.enabled };
+    else if (m.t === 'ministerCity') { M[m.key] = M[m.key] || { cities: {} }; M[m.key].cities = { ...(M[m.key].cities || {}), [m.cityId]: structuredClone(m.config) }; }
+    else if (m.t === 'ministerTrade') M.trade = { ...(M.trade || {}), minShipment: m.settings.minShipment ?? M.trade?.minShipment, cities: structuredClone(m.settings.cities) };
+  });
+  st().movements = { ...mv, ministers: M };
 }
 async function apply(key) {
   const cities = ministerCities(st());
@@ -253,7 +281,7 @@ const cityCell = (c) => {
 };
 // why the recommendation looks like this — a full-width row under the city
 const whyRow = (c, key, cols) => {
-  const why = (ms.why[`${key}:${c.id}`] || []).map((w) => `<li>${esc(t(WHY[w] || w))}</li>`).join('');
+  const why = (ms.why[`${key}:${c.id}`] || []).map((w) => (typeof w === 'string' ? `<li>${esc(t(WHY[w] || w))}</li>` : `<li>${esc(t(WHY[w.k] || w.k, Object.fromEntries(Object.entries(w.p || {}).map(([k, v]) => [k, typeof v === 'number' ? fmtNum(v) : v]))))}</li>`)).join('');
   return why ? `<tr class="mwhyrow ${changed(key, c) ? 'mchg' : ''}"><td colspan="${cols}"><ul class="mwhy small">${why}</ul></td></tr>` : '';
 };
 const recBtn = (c) => `<td><button class="btn sm" data-mact="rec" data-cid="${c.id}" title="${t('Isi rekomendasi untuk kota ini')}">✨</button></td>`;
@@ -331,7 +359,7 @@ function tradeTable(cities) {
       <td>${(v.surplus || 'keep') === 'send' ? `<select data-cid="${c.id}" data-k="trade" data-f="sendTo">${opts(v.sendTo, c.id)}</select>` : '<span class="muted">—</span>'}</td>
       ${recBtn(c)}</tr>${whyRow(c, 'trade', 9)}`;
   }).join('');
-  return `<div class="row small" style="gap:8px;margin-bottom:8px">${t('Kiriman minimum')} <input type="number" min="0" step="500" data-mship value="${ms.minShipment ?? T.minShipment ?? 500}" style="width:110px"> <span class="muted">${t('resource per kiriman (1 gerobak = 1.000)')}</span></div>
+  return `${ms.tradeHubs?.length ? `<div class="small" style="margin-bottom:6px">📦 ${t('Hub per benua (gerobak hanya lewat darat):')} <b>${ms.tradeHubs.map(esc).join(' · ')}</b></div>` : ''}<div class="row small" style="gap:8px;margin-bottom:8px">${t('Kiriman minimum')} <input type="number" min="0" step="500" data-mship value="${ms.minShipment ?? T.minShipment ?? 500}" style="width:110px"> <span class="muted">${t('resource per kiriman (1 gerobak = 1.000)')}</span></div>
     <div class="tbl-wrap"><table class="cs-tbl mtbl"><thead><tr><th>${t('Kota')}</th>${RES.map((r) => `<th>${RES_I[r]} ${t('target')}</th>`).join('')}<th>${t('Minta dari')}</th><th>${t('Kelebihan')}</th><th>${t('Kirim ke')}</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
     <div class="small muted" style="margin-top:6px">${t('Trade disimpan sekaligus untuk semua kota (seperti layar Trade di game); kota yang tidak kamu ubah tetap memakai setelan lamanya. Resource tanpa target tidak pernah dikirim.')}</div>`;
 }

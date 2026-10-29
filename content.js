@@ -389,11 +389,12 @@
         const onRes = (e) => {
           if (e.source !== window || e.data?.__louHelper !== 'minister-result' || e.data.id !== id) return;
           window.removeEventListener('message', onRes);
+          lastMovWrite = 0; // the fresh minister settings that follow are written immediately
           reply({ ok: true, results: e.data.results });
         };
         window.addEventListener('message', onRes);
         window.postMessage({ __louHelperCmd: 'minister', id, msgs: m.msgs }, location.origin);
-        setTimeout(() => { window.removeEventListener('message', onRes); reply({ ok: false, error: 'timeout' }); }, 20000 + m.msgs.length * 16000);
+        setTimeout(() => { window.removeEventListener('message', onRes); reply({ ok: false, error: 'timeout' }); }, 15000);
         return true; // async reply
       }
       if (m?.type !== 'lou-refresh' || !alive) return;

@@ -5,7 +5,7 @@
 // Nothing here sends anything to the game server or changes the game.
 (() => {
   // versioned guard: a newer hook (after an extension update) may install next to an older one
-  const HOOK_V = 6;
+  const HOOK_V = 7;
   if ((window.__louHelperPageHookV || 0) >= HOOK_V) return;
   window.__louHelperPageHookV = HOOK_V;
   window.__louHelperPageHook = true;
@@ -25,21 +25,42 @@
   let gameWs = null;
   window.addEventListener('lou-game-ws', (e) => { gameWs = e.detail; });
   const MINISTER_CMDS = new Set(['ministerCity', 'ministerTrade', 'ministerToggle']);
+  // does the game's own state already hold what we sent? (the server pushes the new settings right after saving)
+  const sub = (want, have) => {
+    if (want === null || typeof want !== 'object') return want === have;
+    if (!have || typeof have !== 'object') return false;
+    if (Array.isArray(want)) return Array.isArray(have) && want.length === have.length && want.every((v, i) => sub(v, have[i]));
+    return Object.keys(want).every((k) => sub(want[k], have[k]));
+  };
+  function applied(m) {
+    try {
+      const M = findStore()?.player?.ministers;
+      if (!M) return false;
+      if (m.t === 'ministerToggle') return !!M[m.key]?.enabled === !!m.enabled;
+      if (m.t === 'ministerCity') return sub(m.config, M[m.key]?.cities?.[m.cityId]);
+      if (m.t === 'ministerTrade') return Object.entries(m.settings.cities || {}).every(([id, c]) => sub(c, M.trade?.cities?.[id])) && (m.settings.minShipment == null || m.settings.minShipment === M.trade?.minShipment);
+    } catch (_) { /* not readable */ }
+    return false;
+  }
+  // one request; resolves on the server's ok/error, or as soon as the game state shows the new settings
   function sendMinister(m) {
     return new Promise((resolve) => {
       if (!m || !MINISTER_CMDS.has(m.t)) return resolve({ ok: false, error: 'not allowed' });
       const ws = gameWs;
       if (!ws || ws.readyState !== 1) return resolve({ ok: false, error: 'no-socket' });
       const reqId = 1000000000 + Math.floor(Math.random() * 900000000);
-      let timer = null;
+      const cid = `louhelper.${reqId}`;
+      let timer = null, poll = null, finished = false;
       const onMsg = (ev) => {
-        let d; try { d = JSON.parse(String(ev.data)); } catch (_) { return; }
-        if (d && d.reqId === reqId && (d.t === 'ok' || d.t === 'error')) done({ ok: d.t === 'ok', error: d.message || null });
+        let d; try { d = JSON.parse(typeof ev.data === 'string' ? ev.data : String(ev.data)); } catch (_) { return; }
+        if (!d || (d.t !== 'ok' && d.t !== 'error')) return;
+        if (String(d.reqId) === String(reqId) || d.cid === cid) done({ ok: d.t === 'ok', error: d.message || null });
       };
-      const done = (r) => { clearTimeout(timer); ws.removeEventListener('message', onMsg); resolve(r); };
-      timer = setTimeout(() => done({ ok: false, error: 'timeout' }), 15000);
+      const done = (r) => { if (finished) return; finished = true; clearTimeout(timer); clearInterval(poll); ws.removeEventListener('message', onMsg); resolve(r); };
+      timer = setTimeout(() => done(applied(m) ? { ok: true, via: 'state' } : { ok: false, error: 'timeout' }), 8000);
+      poll = setInterval(() => { if (applied(m)) done({ ok: true, via: 'state' }); }, 200);
       ws.addEventListener('message', onMsg);
-      try { wsSend.call(ws, JSON.stringify({ ...m, reqId, cid: `louhelper.${reqId}` })); } catch (err) { done({ ok: false, error: String(err) }); }
+      try { wsSend.call(ws, JSON.stringify({ ...m, reqId, cid })); } catch (err) { done({ ok: false, error: String(err) }); }
     });
   }
   window.addEventListener('message', async (e) => {
@@ -48,9 +69,11 @@
     const seen = window.__louMinisterSeen || (window.__louMinisterSeen = new Set());
     if (seen.has(e.data.id)) return;
     seen.add(e.data.id);
-    const results = [];
-    for (const m of e.data.msgs) results.push(await sendMinister(m));
+    // all requests at once (like the game's own client), not one after another
+    const results = await Promise.all(e.data.msgs.map(sendMinister));
     post({ kind: 'minister-result', id: e.data.id, results });
+    // push the fresh settings to the dashboard right away instead of waiting for the next 3-second snapshot
+    setTimeout(() => { try { lastMovSig = ''; snapshot(); } catch (_) { /* ignore */ } }, 150);
   });
 
   // ---- 1. share strings ----

@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { N, TOWNHALL, blank, isBuilding, B } from '../lib/city.js';
 import { militaryTemplate, hubTemplate, troopSpace } from '../lib/templates.js';
-import { planToMinister, typeLevelsFrom, recBuild, recDefense, recWar, recTrade, tradeCmd, sameConfig, cityRole, raidCover } from '../lib/ministers.js';
+import { planToMinister, typeLevelsFrom, recBuild, recDefense, recWar, recTrade, tradeCmd, sameConfig, cityRole, raidCover, raidCoverAvg } from '../lib/ministers.js';
 
 const base = () => { const p = blank(false); p.levels[TOWNHALL] = 3; return { ...p, source: 'game', live: true, cityKey: '10:10', name: 'C' }; };
 const mkState = (layouts, extra = {}) => ({
@@ -48,8 +48,12 @@ test('recommendations: build / defense / war / trade', () => {
   assert.ok(rd.why.includes('def-food')); // a military layout has no farms
   const rw = recWar(S, A);
   assert.ok(rw.config.enabled && rw.config.units.includes('berserker'));
-  assert.ok(raidCover(A.home, rw.config.maxLevel) >= 1.5);
-  assert.ok(rw.config.maxLevel === 10 || raidCover(A.home, rw.config.maxLevel + 1) < 1.5);
+  const L = rw.config.maxLevel;
+  assert.ok(raidCover(A.home, L) >= 1);
+  // the level where ≤ 5 armies use the troops (or the strongest level the troops can still clear)
+  assert.ok(raidCoverAvg(A.home, L) <= 5 || L === 10 || raidCover(A.home, L + 1) < 1);
+  assert.equal(rw.config.maxArmies, Math.max(1, Math.min(5, Math.floor(raidCoverAvg(A.home, L)))));
+  assert.ok(rw.info.lootH > 0);
   assert.equal(recWar(S, { ...A, home: {} }).config.enabled, false);
   const cities = [A, { id: 'H', key: '20:20', x: 20, y: 20, home: {} }];
   const rt = recTrade(S, cities);
@@ -68,4 +72,34 @@ test('trade command keeps untouched cities; config comparison ignores key order'
   assert.equal(cmd.settings.minShipment, 500);
   assert.ok(sameConfig({ a: 1, b: { c: 2, d: 3 } }, { b: { d: 3, c: 2 }, a: 1 }));
   assert.ok(!sameConfig({ a: 1 }, { a: 2 }));
+});
+
+test('war: incoming attack pauses raids, frontline keeps defenders home', () => {
+  const S = mkState([]);
+  const now = 1_000_000_000_000;
+  const A = { id: 'A', key: '10:10', x: 10, y: 10, home: { berserker: 2000, ranger: 2000 } };
+  S.movements.incoming = [{ toX: 10, toY: 10, arriveAt: now + 3600000 }];
+  assert.equal(recWar(S, A, now).config.enabled, false);
+  S.movements.incoming = [];
+  S.attackLog = [{ toX: 10, toY: 10, arriveAt: now - 864e5 }];
+  const r = recWar(S, A, now);
+  assert.deepEqual(r.config.units, ['berserker']);
+  assert.equal(r.config.keepHomePct, 0.3);
+  assert.equal(recWar(S, { ...A, home: {} }, now).config.enabled, false); // nothing to raid with
+});
+
+test('trade: one hub per continent, lone cities only by sea', () => {
+  const p = blank(false); p.levels[TOWNHALL] = 10;
+  const eco = (key) => { const c = p.cells.split(''); let k = 0; for (let i = 0; i < N * N && k < 40; i++) if (c[i] === '-') { c[i] = k % 3 ? '2' : 'C'; k++; } return { ...p, cells: c.join(''), source: 'game', live: true, cityKey: key }; };
+  const hubL = (key) => ({ ...hubTemplate({ ...p, cityKey: key }, { iters: 8000, restarts: 1 }).plan, source: 'game', live: true, cityKey: key });
+  const keys = ['10:10', '30:30', '150:20', '160:30', '450:450'];
+  const S = mkState([eco('10:10'), hubL('30:30'), eco('150:20'), hubL('160:30'), eco('450:450')]);
+  const cities = keys.map((k, i) => { const [x, y] = k.split(':').map(Number); return { id: 'c' + i, key: k, x, y, home: {} }; });
+  const r = recTrade(S, cities);
+  assert.equal(r.hubs[0].c.id, 'c1');
+  assert.equal(r.hubs[1].c.id, 'c3');
+  assert.equal(r.settings.cities.c0.requestFrom, 'c1');
+  assert.equal(r.settings.cities.c2.requestFrom, 'c3'); // its own continent's hub, not the first one
+  assert.equal(r.settings.cities.c4.requestFrom, undefined); // alone on C44, no ships
+  assert.ok(r.why.c4.includes('trade-alone'));
 });

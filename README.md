@@ -2,7 +2,7 @@
 
 🇬🇧 English · [Bahasa Indonesia](README.id.md)
 
-Version 1.17.0 · made by **ardhie** · ardhie.andro@gmail.com
+Version 1.17.1 · made by **ardhie** · ardhie.andro@gmail.com
 
 A helper for **Lord of Ultima: Revival** (lordofultima.me):
 

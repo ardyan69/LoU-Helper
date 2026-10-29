@@ -4,6 +4,10 @@
 
 Made by **ardhie** (ardhie.andro@gmail.com).
 
+## v1.17.1 — 2026-10-30
+
+- ⚡ Set Ministers → Apply to game is much faster: all settings are sent at once (not one by one), count as done as soon as the game answers or its data has changed, and the view updates right away. ⚔️ War: max level & raid count are chosen so almost all raiding troops are used (with a loot/h estimate), troops out raiding are counted, raids switch off while an attack is incoming, frontline cities only send attackers, and the radius comes from dungeons around the max level. 🛒 Trade: one hub per continent (carts only travel over land) picked by capacity, carts & position; cities alone on a continent request by sea if they have ships; military cities' food target comes from army upkeep at full TS; a L10 Moonglow Tower purifies surplus; the minimum shipment follows the hub's carts.
+
 ## v1.17.0 — 2026-10-30
 
 - 🎩 New Set Ministers menu: Build, Defense, War (automatic raids) & Trade minister settings for every city on one screen — read from the game, editable per city, with recommendations (build plan from the Layout Planner in the smart order, wall, garrison/troop space, raid level & radius from troop strength, trade targets with a hub city), an Apply to game button, and on/off for each minister. This is the first feature that sends something to the game: only minister settings, only when you click and confirm.
