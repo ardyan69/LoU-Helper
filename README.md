@@ -12,6 +12,20 @@ A helper for **Lord of Ultima: Revival** (lordofultima.me):
 4. **Dungeons & Bosses**: every dungeon/boss loaded on the Region map is saved automatically (level & explored %); guardians/max loot are filled in when its panel is opened. Includes filters, distance to the nearest city, a raid calculator (carrying units, travel time, loot per hour), unit speed calibration, and raid notes/statistics.
 5. **📜 Cheat Sheet**: *Dungeons*, *Bosses*, *Recruit %*, *Troops Stats*, and *Layouts* tabs (military city layouts, Land & Sea/Water). Minimum/recommended troops for every dungeon and boss type & level (calculated from the Revival game formulas, including Explored %), raid & boss calculators (losses, loot, kill chance), recruit speed per unit, and the stats of every unit. The community cheat sheet tables (classic LoU) are available as a reference too.
 
+## Preview
+
+**City Overview — list table**
+
+![City Overview — list table](docs/screenshots/city-overview.png)
+
+**City Layout Planner — auto-synced in-game layout with real levels**
+
+![City Layout Planner — auto-synced in-game layout with real levels](docs/screenshots/layout-planner.png)
+
+**Movements & Training**
+
+![Movements & Training](docs/screenshots/movements.png)
+
 ## Installation
 1. Extract the ZIP into a folder.
 2. Open `chrome://extensions` and turn on **Developer mode** (top right).

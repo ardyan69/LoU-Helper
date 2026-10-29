@@ -12,6 +12,20 @@ Alat bantu untuk **Lord of Ultima: Revival** (lordofultima.me):
 4. **Dungeon & Boss**: semua dungeon/boss yang dimuat peta Region tersimpan otomatis (level & explored %); guardians/max loot terisi saat panelnya dibuka. Ada filter, jarak ke kota terdekat, kalkulator raid (unit angkut, waktu tempuh, loot per jam), kalibrasi kecepatan unit, dan catatan/statistik raid.
 5. **📜 Cheat Sheet**: tab *Dungeons*, *Bosses*, *Recruit %*, *Troops Stats*, dan *Layouts* (layout kota militer Land & Sea/Water). Isinya jumlah pasukan minimum/rekomendasi untuk tiap tipe & level dungeon dan boss (dihitung dari rumus game Revival, termasuk Explored %), kalkulator raid & boss (kerugian, loot, peluang kill), kecepatan rekrut per unit, dan statistik semua unit. Tabel cheat sheet komunitas (LoU klasik) juga tersedia sebagai referensi.
 
+## Pratinjau
+
+**Ringkasan Kota — tabel list**
+
+![Ringkasan Kota — tabel list](docs/screenshots/city-overview.png)
+
+**Perencana Layout — layout kota tersinkron dari game dengan level asli**
+
+![Perencana Layout — layout kota tersinkron dari game dengan level asli](docs/screenshots/layout-planner.png)
+
+**Pergerakan & Pelatihan**
+
+![Pergerakan & Pelatihan](docs/screenshots/movements.png)
+
 ## Cara pasang
 1. Ekstrak ZIP ke sebuah folder.
 2. Buka `chrome://extensions`, lalu nyalakan **Developer mode** (pojok kanan atas).
