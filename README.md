@@ -2,7 +2,7 @@
 
 🇬🇧 English · [Bahasa Indonesia](README.id.md)
 
-Version 1.16.0 · made by **ardhie** · ardhie.andro@gmail.com
+Version 1.17.0 · made by **ardhie** · ardhie.andro@gmail.com
 
 A helper for **Lord of Ultima: Revival** (lordofultima.me):
 
@@ -13,6 +13,7 @@ A helper for **Lord of Ultima: Revival** (lordofultima.me):
 5. **📈 Statistics**: raid loot per day and per city, total production, score and troops per city over time (recorded hourly).
 6. **👥 Players**: players & alliances seen on the map, your relation tags & notes, and the incoming-attack history per player.
 7. **📜 Cheat Sheet**: *Dungeons*, *Bosses*, *Recruit %*, *Troops Stats*, and *Layouts* tabs (military city layouts, Land & Sea/Water). Minimum/recommended troops for every dungeon and boss type & level (calculated from the Revival game formulas, including Explored %), raid & boss calculators (losses, loot, kill chance), recruit speed per unit (your city's recruit speed % is filled in automatically from its synced layout), and the stats of every unit. **🧱 Buildings** (cost & build time per level with your construction speed) and **⚔️ Battle** (attack/defense simulator with the game's combat rules). The community cheat sheet tables (classic LoU) are available as a reference too.
+8. **🎯 Operations**: attack planner (send times so waves land together, continent/Frigate checks) and defense assistant (which cities can still support an attacked city, battle estimate). **🎩 Set Ministers**: the Build, Defense, War and Trade minister settings of every city on one screen, with recommendations and an *Apply to game* button.
 
 ## Preview
 
@@ -50,7 +51,7 @@ Settings → 🌐 Language: Bahasa Indonesia, English, Español, Français, Deut
 Building icons & names in the Layout Planner are taken from the game when you open the **Build bar**, **Guide → Your city & the grid** (natural nodes), and the **Town Hall** panel. Icons are stored locally in the browser (not bundled with the extension); until they are captured, emoji are used as a fallback.
 
 ## Safety
-The extension only **reads** data that is already on the game page (on-screen text and the city data being displayed). It does not click anything, does not send commands to the game server, and does not automate actions. All data is stored locally in `chrome.storage` in your browser.
+The extension **reads** data that is already on the game page (on-screen text and the game's own city data). It does not click anything and does not automate gameplay. There is one exception, and it only happens when you click it and confirm: **🎩 Set Ministers → Apply to game** sends minister settings (Build, Defense, War, Trade, and switching a minister on or off) with the same commands the game's own Ministers screen uses. Nothing else is ever sent to the game. All data is stored locally in `chrome.storage` in your browser.
 
 ## Notes
 - Layouts from a share string carry no levels (assumed level 10); auto-synced layouts use the real levels. Research bonuses are estimated from the city's real production.

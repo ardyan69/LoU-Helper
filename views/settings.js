@@ -44,7 +44,7 @@ export function render(state) {
 
       <div class="card">
         <h3>👁 ${t('Pembacaan data dari game')}</h3>
-        <p>${t('Extension hanya membaca data yang sudah ada di halaman game. Tidak ada klik atau aksi otomatis.')}</p>
+        <p>${t('Extension membaca data yang sudah ada di halaman game, tanpa klik atau aksi otomatis. Hanya 🎩 Set Ministers → Terapkan ke game yang mengirim setelan minister, setelah kamu konfirmasi.')}</p>
         <label class="check"><input type="checkbox" data-k="capture.cities" ${s.capture.cities ? 'checked' : ''}> ${t('Baca resource, antrian &amp; daftar kota')}</label>
         <label class="check"><input type="checkbox" data-k="capture.dungeons" ${s.capture.dungeons ? 'checked' : ''}> ${t('Simpan dungeon/boss dari peta &amp; panel')}</label>
         <h3 style="margin-top:14px">📐 ${t('Perencana layout')}</h3>

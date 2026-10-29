@@ -130,3 +130,20 @@ test('game layout sync keeps the Town Hall level', () => {
   assert.equal(p.levels[TOWNHALL], 7);
   assert.ok(!isBuilding(p.cells[TOWNHALL]));
 });
+
+test('refresh all cities: rates & capacity computed from the synced layout', async () => {
+  const { calcRates, refreshAllRates } = await import('../lib/cityrates.js');
+  const p = blank(false);
+  p.levels[TOWNHALL] = 10;
+  const S = { cities: { '5:5': { key: '5:5', res: { wood: { v: 100 }, food: { v: 50, rate: 999 } }, seenAt: 1 } },
+    layouts: [{ ...p, source: 'game', live: true, cityKey: '5:5' }],
+    movements: { research: { wood: 4 }, training: [{ x: 5, y: 5, units: { berserker: 48 } }] } };
+  const r = calcRates(S, '5:5');
+  assert.equal(r.rate.wood, 330); // Town Hall 300 × wood research +10%
+  assert.equal(r.rate.food, -12); // 48 berserkers × 6/day
+  assert.equal(r.cap.wood, 175000);
+  const patch = refreshAllRates(S, 7);
+  assert.equal(patch['5:5'].res.food.rate, -12);
+  assert.equal(patch['5:5'].res.wood.calcAt, 7);
+  assert.ok(!patch['5:5'].res.stone); // no stock value → not invented
+});

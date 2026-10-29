@@ -2,7 +2,7 @@
 
 🇮🇩 Bahasa Indonesia · [English](README.md)
 
-Versi 1.16.0 · dibuat oleh **ardhie** · ardhie.andro@gmail.com
+Versi 1.17.0 · dibuat oleh **ardhie** · ardhie.andro@gmail.com
 
 Alat bantu untuk **Lord of Ultima: Revival** (lordofultima.me):
 
@@ -13,6 +13,7 @@ Alat bantu untuk **Lord of Ultima: Revival** (lordofultima.me):
 5. **📈 Statistik**: loot raid per hari & per kota, produksi total, skor, dan pasukan per kota dari waktu ke waktu (dicatat tiap jam).
 6. **👥 Pemain**: pemain & aliansi yang terlihat di peta, status hubungan & catatan, serta riwayat serangan masuk per pemain.
 7. **📜 Cheat Sheet**: tab *Dungeons*, *Bosses*, *Recruit %*, *Troops Stats*, dan *Layouts* (layout kota militer Land & Sea/Water). Isinya jumlah pasukan minimum/rekomendasi untuk tiap tipe & level dungeon dan boss (dihitung dari rumus game Revival, termasuk Explored %), kalkulator raid & boss (kerugian, loot, peluang kill), kecepatan rekrut per unit (recruit speed % kota terisi otomatis dari layout yang tersinkron), dan statistik semua unit. **🧱 Buildings** (biaya & waktu bangun tiap level dengan kecepatan bangun kotamu) dan **⚔️ Battle** (simulator serangan/pertahanan dengan aturan game). Tabel cheat sheet komunitas (LoU klasik) juga tersedia sebagai referensi.
+8. **🎯 Operasi**: perencana serangan (jam kirim supaya gelombang tiba bersamaan, cek benua/Frigate) dan asisten bertahan (kota yang masih sempat membantu, perkiraan pertempuran). **🎩 Set Ministers**: setelan Build, Defense, War & Trade minister semua kota di satu layar, dengan rekomendasi dan tombol *Terapkan ke game*.
 
 ## Pratinjau
 
@@ -48,7 +49,7 @@ Pengaturan → 🌐 Bahasa: Bahasa Indonesia, English, Español, Français, Deut
 Ikon & nama bangunan di Perencana Layout diambil dari game saat kamu membuka **Build bar**, **Guide → Your city & the grid** (node alam), dan panel **Town Hall**. Ikon disimpan lokal di browser (tidak dibundel di extension); sebelum tertangkap, emoji dipakai sebagai cadangan.
 
 ## Keamanan
-Extension ini hanya **membaca** data yang sudah ada di halaman game (teks di layar dan data kota yang sedang ditampilkan). Extension tidak mengklik apa pun, tidak mengirim perintah ke server game, dan tidak mengotomasi aksi. Semua data disimpan lokal di `chrome.storage` di browser kamu.
+Extension ini **membaca** data yang sudah ada di halaman game (teks di layar dan data kota milik game). Extension tidak mengklik apa pun dan tidak mengotomasi permainan. Ada satu pengecualian, dan hanya terjadi saat kamu klik dan mengonfirmasi: **🎩 Set Ministers → Terapkan ke game** mengirim setelan minister (Build, Defense, War, Trade, serta menyalakan/mematikan minister) memakai perintah yang sama dengan layar Ministers di game. Tidak ada hal lain yang dikirim ke game. Semua data disimpan lokal di `chrome.storage` di browser kamu.
 
 ## Catatan
 - Layout dari share string tidak membawa level (dianggap level 10); layout sinkron otomatis memakai level asli. Bonus riset diperkirakan dari produksi nyata kota.

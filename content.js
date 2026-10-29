@@ -380,6 +380,29 @@
       stop(e);
     }
   }
+  // dashboard → "Refresh all cities": forget the last-sent signatures and ask the page hook for a fresh snapshot
+  try {
+    chrome.runtime.onMessage.addListener((m, _s, reply) => {
+      // dashboard → 🎩 Ministers "Apply to game": hand the minister settings to the page hook, return its answers
+      if (m?.type === 'lou-minister' && alive && Array.isArray(m.msgs)) {
+        const id = Math.random().toString(36).slice(2);
+        const onRes = (e) => {
+          if (e.source !== window || e.data?.__louHelper !== 'minister-result' || e.data.id !== id) return;
+          window.removeEventListener('message', onRes);
+          reply({ ok: true, results: e.data.results });
+        };
+        window.addEventListener('message', onRes);
+        window.postMessage({ __louHelperCmd: 'minister', id, msgs: m.msgs }, location.origin);
+        setTimeout(() => { window.removeEventListener('message', onRes); reply({ ok: false, error: 'timeout' }); }, 20000 + m.msgs.length * 16000);
+        return true; // async reply
+      }
+      if (m?.type !== 'lou-refresh' || !alive) return;
+      for (const k of Object.keys(lastWrite)) delete lastWrite[k];
+      window.postMessage({ __louHelperCmd: 'refresh' }, location.origin);
+      reply({ ok: true });
+    });
+  } catch (e) { stop(e); }
+
   // also catch a manual Ctrl+C of a share string (e.g. from the game's text box)
   document.addEventListener('copy', () => {
     const t = String(window.getSelection() || '');

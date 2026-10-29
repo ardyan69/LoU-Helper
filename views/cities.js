@@ -2,6 +2,7 @@ import { RES, RES_LABEL, RES_ICON, accountGold, projected, fullAt, emptyAt, fmtN
 import { t, locale } from '../lib/i18n.js';
 import * as transfer from './transfer.js';
 import { cityFood } from '../lib/food.js';
+import { refreshAllRates } from '../lib/cityrates.js';
 import { rpct, researchLevels } from '../lib/research.js';
 
 let root, ctx, sortBy = 'full', sortDir = 1;
@@ -26,6 +27,7 @@ export function mount(el, c) {
           <button data-mode="food" title="${t('Produksi makanan vs makan pasukan per kota')}">🌾 ${t('Makanan pasukan')}</button>
         </div>
       </div>
+      <div class="field">&nbsp;<button class="btn" id="c-refresh" title="${t('Minta data terbaru semua kota dari tab game, lalu hitung ulang produksi/jam & kapasitas tiap kota dari layout game-nya')}">🔄 ${t('Refresh semua kota')}</button></div>
       <label class="field">${t('Urutkan')}
         <select id="c-sort">
           <option value="full">${t('Gudang penuh tercepat')}</option>
@@ -42,6 +44,7 @@ export function mount(el, c) {
     <div class="summary" id="c-summary"></div>
     <div id="c-list"></div>`;
   root.querySelector('#c-sort').addEventListener('change', (e) => { sortBy = e.target.value; sortDir = 1; render(ctx.state); });
+  root.querySelector('#c-refresh').addEventListener('click', refreshAll);
   root.querySelector('#c-mode').addEventListener('click', (e) => {
     const b = e.target.closest('[data-mode]');
     if (!b) return;
@@ -87,22 +90,30 @@ export function render(state) {
   const list = Object.values(state.cities);
   const now = Date.now();
 
-  // summary
+  // summary (one line)
   const totals = { wood: 0, stone: 0, iron: 0, food: 0, gold: 0 };
-  let idleQueues = 0, soonFull = 0;
+  let idleQueues = 0, soonFull = 0, foodNeg = 0, troops = 0;
   for (const c of list) {
     if (c.res) for (const k of RES) totals[k] += c.res[k]?.rate || 0;
     if (c.queue && c.queue.count === 0) idleQueues++;
     if (earliestFull(c, pct) - now < 2 * 3.6e6) soonFull++;
+    if ((c.res?.food?.rate ?? 0) < 0) foodNeg++;
   }
+  for (const tr of state.movements?.training || []) for (const n of Object.values(tr.units || {})) troops += n || 0;
+  for (const a of state.movements?.armies || []) if (!a.trade) for (const n of Object.values(a.units || {})) troops += n || 0;
+  const incoming = (state.movements?.incoming || []).filter((a) => !a.arriveAt || a.arriveAt - (state.movements.serverOffset || 0) > now).length;
   totals.gold = accountGold(state.cities, now)?.rate || 0; // already the total of all cities
-  root.querySelector('#c-summary').innerHTML = `
-    <div class="stat"><div class="k">${t('Kota tercatat')}</div><div class="v num">${list.length}</div></div>
-    ${['wood', 'stone', 'iron', 'food', 'gold'].map((k) => `
-      <div class="stat"><div class="k">${RES_ICON[k]} ${t('{r} / jam (total)', { r: RES_LABEL[k] })}</div>
-      <div class="v num" style="color:${totals[k] < 0 ? 'var(--bad)' : 'inherit'}">${totals[k] >= 0 ? '+' : ''}${fmtNum(totals[k])}</div></div>`).join('')}
-    <div class="stat"><div class="k">${t('Antrian kosong')}</div><div class="v num" style="color:${idleQueues ? 'var(--warn)' : 'inherit'}">${idleQueues}</div></div>
-    <div class="stat"><div class="k">${t('Gudang ≥{p}% dalam 2 jam', { p: pct })}</div><div class="v num" style="color:${soonFull ? 'var(--warn)' : 'inherit'}">${soonFull}</div></div>`;
+  const tile = (k, v, color, title) => `<div class="stat" title="${esc(title || k)}"><div class="k">${k}</div><div class="v num"${color ? ` style="color:${color}"` : ''}>${v}</div></div>`;
+  root.querySelector('#c-summary').innerHTML = [
+    tile(`🏰 ${t('Kota')}`, list.length, '', t('Kota tercatat')),
+    ...['wood', 'stone', 'iron', 'food', 'gold'].map((k) => tile(`${RES_ICON[k]} ${t('/jam')}`, `${totals[k] >= 0 ? '+' : ''}${fmtNum(totals[k])}`, totals[k] < 0 ? 'var(--bad)' : '', t('{r} / jam (total)', { r: RES_LABEL[k] }))),
+    tile(`⚔️ ${t('Pasukan')}`, fmtNum(troops), '', t('Semua pasukan: di kota + sedang bergerak')),
+    tile(`⚠️ ${t('Serangan')}`, incoming, incoming ? 'var(--bad)' : '', t('Serangan masuk')),
+    tile(`🌾 ${t('Minus')}`, foodNeg, foodNeg ? 'var(--bad)' : '', t('Kota dengan produksi makanan minus')),
+    tile(`🔨 ${t('Kosong')}`, idleQueues, idleQueues ? 'var(--warn)' : '', t('Antrian kosong')),
+    tile(`📦 ≥${pct}%`, soonFull, soonFull ? 'var(--warn)' : '', t('Gudang ≥{p}% dalam 2 jam', { p: pct }))
+  ].join('');
+  root.querySelector('#c-summary').classList.add('oneline');
 
   const latest = Math.max(0, ...list.map((c) => Math.max(c.syncedAt || 0, c.seenAt || 0)));
   root.querySelector('#c-stale').innerHTML = latest && now - latest > 5 * 60000
@@ -140,6 +151,7 @@ function sortKey(c, key, pct, now) {
     case 'troops': return -(c.troops ?? -1);
     case 'bld': return -(c.buildings?.used ?? -1);
     case 'gold': return -(c.res?.gold ? projected(c.res.gold, c.seenAt, now) : -1);
+    case 'rate': return c.res?.[r]?.rate == null ? Infinity : -c.res[r].rate;
     case 'v': return -(resInfo(c, r, pct, now)?.v ?? -1);
     case 'p': return -(resInfo(c, r, pct, now)?.p ?? -1);
     case 'rate': return -(c.res?.[r]?.rate ?? -1e9);
@@ -199,6 +211,7 @@ function tableList(list, pct, now) {
         if (i.approx) return `<td class="r num muted" title="${t('Perkiraan dari daftar kota')}">~${fmtNum(i.v)}</td>`;
         return `<td class="r num"><div class="res-mini"><span>${fmtNum(i.v)}</span><span class="bar"><i style="width:${i.p.toFixed(0)}%;background:${i.color}"></i></span></div></td>`;
       }).join('')}
+      ${RES.map((r) => rateCell(c.res?.[r])).join('')}
       <td class="r num">${c.res?.gold ? fmtNum(projected(c.res.gold, c.seenAt, now)) : '—'}</td>
       <td>${first}</td>
       <td>${queueCell(c, now)}</td>
@@ -213,6 +226,7 @@ function tableList(list, pct, now) {
     <thead><tr>
       ${th(t('Kota'), 'name', 'sticky-col')}${th(t('Grup'), 'group')}
       ${RES.map((r) => th(`${RES_ICON[r]} ${RES_LABEL[r]}`, 'p:' + r, 'r')).join('')}
+      ${RES.map((r) => th(`${RES_ICON[r]} ${t('/jam')}`, 'rate:' + r, 'r rate-col')).join('')}
       ${th(`${RES_ICON.gold} ${t('Emas')}`, 'gold', 'r')}${th(t('Penuh tercepat'), 'full')}${th(t('Antrian'), 'queue')}
       ${th('🏠', 'bld', 'r')}${th('⚔️ ' + t('Pasukan'), 'troops', 'r')}${th('★ ' + t('Skor'), 'score', 'r')}${th(t('Update'), 'seen')}<th></th>
     </tr></thead><tbody>${rows}</tbody></table></div>`;
@@ -349,4 +363,33 @@ function foodTable(state, list, now) {
       ${netCell(f.netFull, null, now)}
       <td class="small">${advice(f)}</td></tr>`).join('')}
     </tbody></table></div>`;
+}
+
+// production/h cell (≈ = computed from the synced layout by "Refresh all cities")
+function rateCell(x) {
+  if (!x || x.rate == null) return '<td class="r num muted rate-col">—</td>';
+  const calc = x.calcAt ? ` <span class="muted small" title="${t('Dihitung dari layout game + riset (Refresh semua kota)')}">≈</span>` : '';
+  return `<td class="r num rate-col" style="color:${x.rate < 0 ? 'var(--bad)' : 'inherit'}">${x.rate >= 0 ? '+' : ''}${fmtNum(x.rate)}${calc}</td>`;
+}
+
+// 🔄 ask the open game tab(s) for a fresh snapshot of every city, then recompute rates & capacity from the layouts
+async function refreshAll() {
+  const btn = root.querySelector('#c-refresh');
+  btn.disabled = true;
+  let tabs = 0;
+  try {
+    const list = await chrome.tabs.query({ url: 'https://lordofultima.me/*' });
+    for (const tb of list) { try { await chrome.tabs.sendMessage(tb.id, { type: 'lou-refresh' }); tabs++; } catch { /* old content script: needs F5 */ } }
+  } catch { /* tabs API unavailable */ }
+  if (tabs) await new Promise((r) => setTimeout(r, 2500)); // let the snapshot arrive
+  const fresh = await chrome.storage.local.get(['cities', 'layouts', 'movements']);
+  const st = { ...ctx.state, cities: fresh.cities || ctx.state.cities, layouts: fresh.layouts || ctx.state.layouts, movements: fresh.movements || ctx.state.movements };
+  const patch = refreshAllRates(st);
+  const n = Object.keys(patch).length;
+  if (n) await ctx.save({ cities: { ...st.cities, ...patch } });
+  btn.disabled = false;
+  render(ctx.state);
+  ctx.toast(tabs
+    ? t('Diperbarui dari game · produksi/jam {n} kota dihitung ulang dari layout', { n })
+    : t('Tab game tidak terbuka (atau perlu F5) · produksi/jam {n} kota dihitung ulang dari layout', { n }));
 }

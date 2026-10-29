@@ -83,6 +83,7 @@ export function mount(el, c) {
         <div class="row" style="margin-top:6px">
           <button class="btn sm" id="l-all10" title="${t('Set semua bangunan ke level 10')}">${t('Semua lvl 10')}</button>
           <button class="btn sm" id="l-clear">${t('Kosongkan bangunan')}</button>
+          <button class="btn sm" id="l-clearnodes" title="${t('Hapus semua node alam (hutan, batu, bijih besi, danau) dari rencana ini')}">${t('Kosongkan node')}</button>
         </div>
       </div>
 
@@ -166,8 +167,18 @@ export function mount(el, c) {
     if (!cur || locked() || !confirm(t('Hapus semua bangunan (node alam tetap)?'))) return;
     snapshot();
     cur.cells = [...cur.cells].map((c) => (isBuilding(c) ? '-' : c)).join('');
-    cur.levels = cur.levels.map(() => 0);
+    cur.levels = cur.levels.map((v, i) => (i === TOWNHALL ? v : 0)); // keep the Town Hall level
     changed();
+  };
+  root.querySelector('#l-clearnodes').onclick = () => {
+    if (!cur || locked()) return;
+    const n = [...cur.cells].filter(isNode).length;
+    if (!n) { ctx.toast(t('Rencana ini tidak punya node alam.')); return; }
+    if (!confirm(t('Hapus {n} node alam (hutan, batu, bijih besi, danau)? Bangunan tetap.', { n }))) return;
+    snapshot();
+    cur.cells = [...cur.cells].map((c) => (isNode(c) ? '-' : c)).join('');
+    changed();
+    ctx.toast(t('{n} node alam dihapus — "Langkah pembangunan" mencantumkannya sebagai bongkar.', { n }));
   };
 
   // map toggles
@@ -438,15 +449,42 @@ function syncTools() {
   root.querySelectorAll('.tool').forEach((t) => t.classList.toggle('on', t.dataset.tool === tool));
 }
 
+// plan list order: in-game state, plans, military plans, others, empty layouts (each A→Z)
+const mark = (s) => s;
+const PLAN_GROUPS = [mark('Kondisi di game'), mark('Rencana'), mark('Rencana militer'), mark('Lainnya'), mark('Layout kosong')];
+const MIL_RECRUIT = new Set(['B', 'K', 'G', 'E', 'J', 'Z', 'Y', 'V', 'X']);
+export function planGroup(l) {
+  let n = 0, mil = 0, eco = 0;
+  for (const c of l.cells || '') {
+    if (!isBuilding(c)) continue;
+    n++;
+    if (MIL_RECRUIT.has(c)) mil++;
+    else if (B[c].g === 'prod' || B[c].g === 'proc' || c === 'C') eco++;
+  }
+  if (l.source === 'game') return 0;
+  if (!n) return 4;
+  if (mil / n >= 0.3) return 2;
+  if (eco / n >= 0.4) return 1;
+  return 3;
+}
+function groupPlans(list) {
+  const g = [[], [], [], [], []];
+  for (const l of list) g[planGroup(l)].push(l);
+  const key = (l) => String(l.name || '').replace(/^[^\p{L}\p{N}#]+/u, ''); // ignore leading icons (🧠 🧩 …)
+  const byName = (a, b) => key(a).localeCompare(key(b), locale(), { numeric: true, sensitivity: 'base' });
+  return g.map((ls, i) => [i, ls.sort(byName)]).filter(([, ls]) => ls.length);
+}
+
 // ---------- drawing ----------
 function drawAll() {
   const sel = root.querySelector('#l-select');
   const L = ctx.state.layouts;
   const label = (l) => `${l.source === 'game' ? '🏰 ' : ''}${esc(l.name)}${l.water ? ' 🌊' : ''}`;
-  sel.innerHTML = L.map((l) => `<option value="${l.id}" ${l.id === cur?.id ? 'selected' : ''}>${label(l)}</option>`).join('');
+  const grouped = (list, selId) => groupPlans(list).map(([g, ls]) => `<optgroup label="${esc(t(PLAN_GROUPS[g]))}">${ls.map((l) => `<option value="${l.id}" ${l.id === selId ? 'selected' : ''}>${label(l)}</option>`).join('')}</optgroup>`).join('');
+  sel.innerHTML = grouped(L, cur?.id);
   const cmp = root.querySelector('#t-cmp');
   if (compareId && !L.some((l) => l.id === compareId)) compareId = '';
-  cmp.innerHTML = `<option value="">— ${t('tidak')} —</option>` + L.filter((l) => l.id !== cur?.id).map((l) => `<option value="${l.id}" ${l.id === compareId ? 'selected' : ''}>${label(l)}</option>`).join('');
+  cmp.innerHTML = `<option value="">— ${t('tidak')} —</option>` + grouped(L.filter((l) => l.id !== cur?.id), compareId);
   const meta = root.querySelector('#l-meta');
   if (cur) {
     meta.innerHTML = cur.source === 'game' && cur.live

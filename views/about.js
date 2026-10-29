@@ -64,7 +64,7 @@ function readme() {
         <li>${t('Notifikasi diatur di tab ⚙️ Pengaturan.')}</li>
         <li>${t('Cadangkan data lewat Pengaturan → Ekspor cadangan.')}</li></ul></div>
       <div class="card"><h3>🔒 ${t('Keamanan &amp; privasi')}</h3><ul>
-        <li>${t('Hanya <b>membaca</b> data yang sudah ada di halaman game — tidak mengklik, tidak mengirim perintah, tidak mengotomasi aksi.')}</li>
+        <li>${t('<b>Membaca</b> data yang sudah ada di halaman game — tidak mengklik dan tidak mengotomasi aksi. Satu-satunya yang dikirim ke game: setelan minister dari 🎩 Set Ministers, hanya saat kamu klik Terapkan ke game dan mengonfirmasi.')}</li>
         <li>${t('Semua data disimpan lokal di browser (chrome.storage); tidak ada yang dikirim ke server lain.')}</li></ul></div>
     </div>
   </div>`;

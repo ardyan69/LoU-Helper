@@ -5,11 +5,53 @@
 // Nothing here sends anything to the game server or changes the game.
 (() => {
   // versioned guard: a newer hook (after an extension update) may install next to an older one
-  const HOOK_V = 4;
+  const HOOK_V = 6;
   if ((window.__louHelperPageHookV || 0) >= HOOK_V) return;
   window.__louHelperPageHookV = HOOK_V;
   window.__louHelperPageHook = true;
   const post = (msg) => window.postMessage({ __louHelper: msg.kind, ...msg }, location.origin);
+
+  // ---- 0. the game's own WebSocket (only used for 🎩 Ministers → "Apply to game", on your explicit click) ----
+  // Remember the socket the game sends its messages on, so a minister setting can be sent exactly the way the
+  // game's Ministers screen sends it. Nothing else is ever sent.
+  const wsSend = WebSocket.prototype.__louOrigSend || WebSocket.prototype.send;
+  if (!WebSocket.prototype.__louOrigSend) {
+    Object.defineProperty(WebSocket.prototype, '__louOrigSend', { value: wsSend });
+    WebSocket.prototype.send = function (d) {
+      try { if (typeof d === 'string' && d.startsWith('{"t":')) window.dispatchEvent(new CustomEvent('lou-game-ws', { detail: this })); } catch (_) { /* never break the game */ }
+      return wsSend.apply(this, arguments);
+    };
+  }
+  let gameWs = null;
+  window.addEventListener('lou-game-ws', (e) => { gameWs = e.detail; });
+  const MINISTER_CMDS = new Set(['ministerCity', 'ministerTrade', 'ministerToggle']);
+  function sendMinister(m) {
+    return new Promise((resolve) => {
+      if (!m || !MINISTER_CMDS.has(m.t)) return resolve({ ok: false, error: 'not allowed' });
+      const ws = gameWs;
+      if (!ws || ws.readyState !== 1) return resolve({ ok: false, error: 'no-socket' });
+      const reqId = 1000000000 + Math.floor(Math.random() * 900000000);
+      let timer = null;
+      const onMsg = (ev) => {
+        let d; try { d = JSON.parse(String(ev.data)); } catch (_) { return; }
+        if (d && d.reqId === reqId && (d.t === 'ok' || d.t === 'error')) done({ ok: d.t === 'ok', error: d.message || null });
+      };
+      const done = (r) => { clearTimeout(timer); ws.removeEventListener('message', onMsg); resolve(r); };
+      timer = setTimeout(() => done({ ok: false, error: 'timeout' }), 15000);
+      ws.addEventListener('message', onMsg);
+      try { wsSend.call(ws, JSON.stringify({ ...m, reqId, cid: `louhelper.${reqId}` })); } catch (err) { done({ ok: false, error: String(err) }); }
+    });
+  }
+  window.addEventListener('message', async (e) => {
+    if (e.source !== window || !e.data || e.data.__louHelperCmd !== 'minister' || !Array.isArray(e.data.msgs)) return;
+    // a newer hook version may be installed next to this one: handle each request only once
+    const seen = window.__louMinisterSeen || (window.__louMinisterSeen = new Set());
+    if (seen.has(e.data.id)) return;
+    seen.add(e.data.id);
+    const results = [];
+    for (const m of e.data.msgs) results.push(await sendMinister(m));
+    post({ kind: 'minister-result', id: e.data.id, results });
+  });
 
   // ---- 1. share strings ----
   const cb = navigator.clipboard;
@@ -160,7 +202,7 @@
     }));
     const marketMine = ((S.market && S.market.mine) || []).map(plain).filter(Boolean);
     const P = S.player || {};
-    const data = { serverOffset: S.serverOffset || 0, lang: P.lang || null, player: P.name || null, research: P.research || null, worldSpeed: (S.world && S.world.speed) || 1, armies, incoming, incomingTrades, training, marketMine };
+    const data = { serverOffset: S.serverOffset || 0, lang: P.lang || null, player: P.name || null, research: P.research || null, ministers: P.ministers || null, ministerUntil: P.ministerUntil || null, worldSpeed: (S.world && S.world.speed) || 1, armies, incoming, incomingTrades, training, marketMine };
     const sig = JSON.stringify(data, (key, v) => (key === 'serverOffset' ? undefined : v));
     if (sig !== lastMovSig) { lastMovSig = sig; post({ kind: 'movements', data }); }
     // towers & traps in the wall slots: { ranger_tower: [levels…], pitfall_trap: [...] }
@@ -197,4 +239,11 @@
     } catch (_) { /* never break the game */ }
   }
   setInterval(snapshot, 3000);
+  // "Refresh all cities" from the dashboard (via the content script): resend everything now
+  window.addEventListener('message', (e) => {
+    if (e.source !== window || !e.data || e.data.__louHelperCmd !== 'refresh') return;
+    for (const k of Object.keys(lastSig)) delete lastSig[k];
+    lastMapVer = -1; lastMovSig = ''; lastCitySig = '';
+    snapshot();
+  });
 })();

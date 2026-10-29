@@ -176,9 +176,9 @@ function drawAttack(st) {
     <div class="card">
       <div class="ogrid">
         <label class="field">${t('Target (koordinat x:y)')}<input type="text" data-o="target" value="${esc(os.target)}" placeholder="312:245" list="o-targets"><datalist id="o-targets">${knownCities(st).slice(0, 400).map((c) => `<option value="${c.key}">${esc(c.tag ? `[${c.tag}] ` : '')}${esc(c.owner)} — ${esc(c.name || '')}</option>`).join('')}</datalist><span class="small muted">${target ? targetInfo(st, target) : t('Tempel koordinat dari game.')}</span></label>
-        <div class="field">${t('Waktu tiba')}
+        <div class="ofield">${t('Waktu tiba')}
           <div class="seg"><button data-mode="asap" class="${os.mode === 'asap' ? 'on' : ''}">⚡ ${t('Secepatnya')}</button><button data-mode="at" class="${os.mode === 'at' ? 'on' : ''}">🕐 ${t('Pada jam')}</button></div>
-          ${os.mode === 'at' ? `<input type="datetime-local" step="1" data-o="at" value="${esc(os.at)}">` : `<label class="small row" style="gap:6px">${t('Waktu siap-siap')} <input type="number" min="0" max="120" data-o="ready" value="${os.ready}" style="width:70px"> ${t('menit')}</label>`}
+          ${os.mode === 'at' ? `<input type="datetime-local" step="1" data-o="at" value="${esc(os.at)}"><span class="small muted">${t('Jam komputermu (tanggal & jam:menit:detik).')}</span>` : `<span class="row" style="gap:6px">${t('Waktu siap-siap')} <input type="number" min="0" max="120" data-o="ready" value="${os.ready}"> ${t('menit')}</span>`}
         </div>
         <label class="field">${t('Jeda antar gelombang (detik)')}<input type="number" min="0" max="3600" data-o="gap" value="${os.gap}"><span class="small muted">${t('Gelombang 1 tiba dulu (mis. pembersih), gelombang 2 sekian detik kemudian (mis. Baron / siege).')}</span></label>
       </div>

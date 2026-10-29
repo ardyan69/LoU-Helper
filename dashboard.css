@@ -1,4 +1,5 @@
 :root {
+  color-scheme: dark;
   --bg: #15110c;
   --panel: #1f1912;
   --panel-2: #29211769;
@@ -61,7 +62,7 @@ section.view.on { display: block; }
 .btn.primary:hover { background: var(--gold-2); }
 .btn.danger:hover { border-color: var(--bad); color: var(--bad); }
 .btn.sm { padding: 3px 8px; font-size: 12px; }
-input[type=text], input[type=number], select, textarea {
+input[type=text], input[type=number], input[type=datetime-local], input[type=date], input[type=time], select, textarea {
   background: #120e0a; border: 1px solid var(--line); border-radius: 7px; padding: 6px 8px; min-width: 0;
 }
 input:focus, select:focus, textarea:focus { outline: none; border-color: var(--gold); }
@@ -408,3 +409,32 @@ dialog.tpldlg, dialog.cmpdlg { max-height: 92vh; overflow: auto; }
 .inc-tabs { display: flex; flex-wrap: wrap; gap: 6px; }
 .inc-tabs .inc { background: #ffffff0a; border: 1px solid var(--line); color: var(--text); border-radius: 8px; padding: 6px 10px; cursor: pointer; font: inherit; }
 .inc-tabs .inc.on { border-color: var(--gold); background: #e3b04b1f; }
+
+/* Operasi: arrival time field stacked like the other inputs */
+.ofield { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
+.ofield .seg { align-self: flex-start; }
+.ofield input[type=datetime-local] { width: 100%; color: var(--text); }
+.ofield input[type=number] { width: 90px; }
+
+/* City Overview: summary tiles on one line */
+.summary.oneline { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 8px; }
+.summary.oneline .stat { padding: 7px 9px; min-width: 0; }
+.summary.oneline .stat .k { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 11.5px; }
+.summary.oneline .stat .v { font-size: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 1100px) { .summary.oneline { grid-auto-flow: row; grid-template-columns: repeat(auto-fit, minmax(105px, 1fr)); } }
+.ctable th.rate-col, .ctable td.rate-col { font-size: 12.5px; }
+
+/* 🎩 Ministers */
+.mchips { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.mchip { display: flex; align-items: center; gap: 8px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 10px; flex-wrap: wrap; }
+.mchip b { flex: 1 1 auto; }
+.mchip.on { border-color: #7fbf6a66; }
+.mbar { gap: 8px; margin: 10px 0; }
+.mtbl td { vertical-align: top; }
+.mtbl input[type=number] { width: 78px; }
+.mtbl select { max-width: 230px; }
+.mtbl tr.mchg td { background: #e3b04b14; }
+.mtbl tr.mchg td:first-child { box-shadow: inset 3px 0 0 var(--gold); }
+.mwhy { margin: 0; padding-left: 18px; color: var(--muted); }
+.mtbl tr.mwhyrow td { padding-top: 0; border-top: none; }
+@media (max-width: 900px) { .mchips { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

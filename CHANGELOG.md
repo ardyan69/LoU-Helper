@@ -4,6 +4,14 @@
 
 Made by **ardhie** (ardhie.andro@gmail.com).
 
+## v1.17.0 — 2026-10-30
+
+- 🎩 New Set Ministers menu: Build, Defense, War (automatic raids) & Trade minister settings for every city on one screen — read from the game, editable per city, with recommendations (build plan from the Layout Planner in the smart order, wall, garrison/troop space, raid level & radius from troop strength, trade targets with a hub city), an Apply to game button, and on/off for each minister. This is the first feature that sends something to the game: only minister settings, only when you click and confirm.
+
+## v1.16.1 — 2026-10-30
+
+- 🧰 Layout Planner: Clear nodes button, plan list grouped & sorted (in-game state, plans, military plans, others, empty layouts). City Overview: 🔄 Refresh all cities button (asks the game for the latest data, then computes each city's production/h & capacity from its layout + research), one-line summary cards (+ troops, incoming attacks, cities with negative food), and production/h columns in the List table. Operations: the arrival time input matches the other inputs.
+
 ## v1.16.0 — 2026-10-29
 
 - 🎯 New Operations tab → Attack planner: pick a target & cities; send times are worked out so everything lands together or in waves (gap in seconds), with checks for other continents/Frigates, Castle, slowest unit, countdowns, and a plan text to copy.

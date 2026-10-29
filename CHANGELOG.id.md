@@ -4,6 +4,14 @@
 
 Dibuat oleh **ardhie** (ardhie.andro@gmail.com).
 
+## v1.17.0 — 2026-10-30
+
+- 🎩 Menu baru Set Ministers: setelan Build, Defense, War (raid otomatis) & Trade minister semua kota di satu layar — dibaca dari game, bisa diedit per kota, dengan rekomendasi (rencana bangun dari Perencana Layout dalam urutan pintar, tembok, garnisun/troop space, level & radius raid dari kekuatan pasukan, target trade dengan kota hub), tombol Terapkan ke game, dan nyala/mati tiap minister. Ini fitur pertama yang mengirim sesuatu ke game: hanya setelan minister, hanya saat kamu klik dan mengonfirmasi.
+
+## v1.16.1 — 2026-10-30
+
+- 🧰 Perencana Layout: tombol Kosongkan node, daftar rencana dikelompokkan & diurutkan (kondisi di game, rencana, rencana militer, lainnya, layout kosong). Ringkasan Kota: tombol 🔄 Refresh semua kota (minta data terbaru dari game, lalu hitung produksi/jam & kapasitas tiap kota dari layout + riset), kartu ringkasan satu baris (+ pasukan, serangan masuk, kota makanan minus), dan kolom produksi/jam di Tabel list. Operasi: input jam tiba senada dengan input lain.
+
 ## v1.16.0 — 2026-10-29
 
 - 🎯 Tab baru Operasi → Perencana serangan: pilih target & kota, jam kirim dihitung supaya semua tiba bersamaan atau bergelombang (jeda detik), dengan cek beda benua/Frigate, Castle, unit paling lambat, hitung mundur, dan teks rencana untuk disalin.

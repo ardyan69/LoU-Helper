@@ -9,10 +9,11 @@ import * as cheat from './views/cheatsheet.js';
 import * as stats from './views/stats.js';
 import * as players from './views/players.js';
 import * as ops from './views/ops.js';
+import * as ministers from './views/ministers.js';
 import { loadIcons } from './lib/icons.js';
 import { initLang, t } from './lib/i18n.js';
 
-const NAV = { kota: ['🏰', 'Ringkasan Kota'], layout: ['📐', 'Perencana Layout'], gerak: ['🚩', 'Pergerakan'], operasi: ['🎯', 'Operasi'], dungeon: ['⚔️', 'Dungeon & Boss'], statistik: ['📈', 'Statistik'], pemain: ['👥', 'Pemain'], pengaturan: ['⚙️', 'Pengaturan'], cheat: ['📜', 'Cheat Sheet'], tentang: ['ℹ️', 'Tentang'] };
+const NAV = { kota: ['🏰', 'Ringkasan Kota'], layout: ['📐', 'Perencana Layout'], gerak: ['🚩', 'Pergerakan'], operasi: ['🎯', 'Operasi'], menteri: ['🎩', 'Set Ministers'], dungeon: ['⚔️', 'Dungeon & Boss'], statistik: ['📈', 'Statistik'], pemain: ['👥', 'Pemain'], pengaturan: ['⚙️', 'Pengaturan'], cheat: ['📜', 'Cheat Sheet'], tentang: ['ℹ️', 'Tentang'] };
 function translateChrome() {
   document.querySelectorAll('nav.tabs a').forEach((a) => {
     const [ico, label] = NAV[a.dataset.view] || [];
@@ -25,7 +26,7 @@ function translateChrome() {
   if (foot) foot.innerHTML = `LoU Revival Helper · ${t('dibuat oleh')} <a href="#tentang">ardhie</a> · <a href="mailto:ardhie.andro@gmail.com">ardhie.andro@gmail.com</a>`;
 }
 
-const views = { kota: cities, layout, gerak: movements, operasi: ops, dungeon, statistik: stats, pemain: players, pengaturan: settings, cheat, tentang: about };
+const views = { kota: cities, layout, gerak: movements, operasi: ops, menteri: ministers, dungeon, statistik: stats, pemain: players, pengaturan: settings, cheat, tentang: about };
 document.getElementById('ver').textContent = 'v' + chrome.runtime.getManifest().version;
 const mounted = {};
 const ctx = {
