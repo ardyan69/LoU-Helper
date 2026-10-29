@@ -1,4 +1,5 @@
 // LoU Revival Helper — background service worker: schedules alarms and shows desktop notifications.
+import './lib/compat.js'; // must stay the first import (Firefox/Safari: chrome → browser)
 import { getAll, fullAt, emptyAt, RES, RES_LABEL, uid, trainingTimes, unitName } from './lib/shared.js';
 import { parseShareString, fromGame, isBuilding, N } from './lib/city.js';
 import { initLang, t, locale } from './lib/i18n.js';
@@ -163,14 +164,22 @@ chrome.runtime.onInstalled.addListener(async () => {
   for (const t of tabs) {
     try {
       await chrome.scripting.executeScript({ target: { tabId: t.id }, files: ['page-hook.js'], world: 'MAIN' });
-      await chrome.scripting.executeScript({ target: { tabId: t.id }, files: ['lib/i18n/content-dict.js', 'content.js'] });
+      await chrome.scripting.executeScript({ target: { tabId: t.id }, files: ['lib/compat.js', 'lib/i18n/content-dict.js', 'content.js'] });
     } catch (e) { console.warn('[LoU Helper] inject failed', e); }
   }
 });
 chrome.runtime.onStartup.addListener(debounceReschedule);
 
+// desktop notifications: not available in Safari; Firefox may not accept `priority`
+function notifyRaw(id, opts) {
+  if (!chrome.notifications?.create) return;
+  try {
+    const p = chrome.notifications.create(id, opts);
+    if (p?.catch) p.catch(() => { const { priority, ...rest } = opts; void priority; chrome.notifications.create(id, rest); });
+  } catch (_) { const { priority, ...rest } = opts; void priority; try { chrome.notifications.create(id, rest); } catch (__) { /* no notifications */ } }
+}
 function notify(id, title, message, priority = 1) {
-  chrome.notifications.create(id + '|' + Date.now(), { type: 'basic', iconUrl: 'icons/icon128.png', title, message, priority });
+  notifyRaw(id + '|' + Date.now(), { type: 'basic', iconUrl: 'icons/icon128.png', title, message, priority });
 }
 const fmtTime = (ts) => new Date(ts).toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' });
 
@@ -222,7 +231,7 @@ chrome.alarms.onAlarm.addListener(async (al) => {
     title = t('Antrian bangunan selesai — {c}', { c: name });
     message = t('Semua order konstruksi diperkirakan sudah selesai. Saatnya isi antrian lagi.');
   } else return;
-  chrome.notifications.create(al.name + '|' + Date.now(), {
+  notifyRaw(al.name + '|' + Date.now(), {
     type: 'basic',
     iconUrl: 'icons/icon128.png',
     title,
@@ -231,7 +240,7 @@ chrome.alarms.onAlarm.addListener(async (al) => {
   });
 });
 
-chrome.notifications.onClicked.addListener(async (id) => {
+chrome.notifications?.onClicked.addListener(async (id) => {
   chrome.notifications.clear(id);
   const tabs = await chrome.tabs.query({ url: GAME_URL + '*' });
   if (tabs[0]) {
@@ -245,7 +254,7 @@ chrome.notifications.onClicked.addListener(async (id) => {
 chrome.runtime.onMessage.addListener((msg, _s, reply) => {
   if (msg?.type === 'test-notification') {
     initLang().then(() => {
-      chrome.notifications.create('test|' + Date.now(), {
+      notifyRaw('test|' + Date.now(), {
         type: 'basic', iconUrl: 'icons/icon128.png',
         title: 'LoU Helper — ' + t('tes notifikasi'), message: t('Notifikasi desktop berfungsi.') + ' 👍'
       });

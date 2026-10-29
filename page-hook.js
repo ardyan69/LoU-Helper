@@ -5,7 +5,7 @@
 // Nothing here sends anything to the game server or changes the game.
 (() => {
   // versioned guard: a newer hook (after an extension update) may install next to an older one
-  const HOOK_V = 7;
+  const HOOK_V = 8;
   if ((window.__louHelperPageHookV || 0) >= HOOK_V) return;
   window.__louHelperPageHookV = HOOK_V;
   window.__louHelperPageHook = true;
@@ -74,6 +74,11 @@
     post({ kind: 'minister-result', id: e.data.id, results });
     // push the fresh settings to the dashboard right away instead of waiting for the next 3-second snapshot
     setTimeout(() => { try { lastMovSig = ''; snapshot(); } catch (_) { /* ignore */ } }, 150);
+  });
+
+  // the content script asks whether a hook is running in the page (else it injects one itself)
+  window.addEventListener('message', (e) => {
+    if (e.source === window && e.data && e.data.__louHelperCmd === 'ping') post({ kind: 'pong', v: HOOK_V });
   });
 
   // ---- 1. share strings ----

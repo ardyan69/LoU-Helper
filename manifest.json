@@ -2,26 +2,45 @@
   "manifest_version": 3,
   "name": "LoU Revival Helper",
   "short_name": "LoU Helper",
-  "version": "1.17.1",
-  "author": { "email": "ardhie.andro@gmail.com" },
+  "version": "1.18.0",
+  "author": {
+    "email": "ardhie.andro@gmail.com"
+  },
   "description": "Ringkasan kota, perencana layout, pasukan, dungeon & minister untuk Lord of Ultima: Revival. Dibuat oleh ardhie.",
   "minimum_chrome_version": "111",
-  "permissions": ["storage", "alarms", "notifications", "scripting"],
-  "host_permissions": ["https://lordofultima.me/*"],
+  "permissions": [
+    "storage",
+    "alarms",
+    "notifications",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://lordofultima.me/*"
+  ],
   "background": {
     "service_worker": "background.js",
     "type": "module"
   },
   "content_scripts": [
     {
-      "matches": ["https://lordofultima.me/*"],
-      "js": ["page-hook.js"],
+      "matches": [
+        "https://lordofultima.me/*"
+      ],
+      "js": [
+        "page-hook.js"
+      ],
       "run_at": "document_start",
       "world": "MAIN"
     },
     {
-      "matches": ["https://lordofultima.me/*"],
-      "js": ["lib/i18n/content-dict.js", "content.js"],
+      "matches": [
+        "https://lordofultima.me/*"
+      ],
+      "js": [
+        "lib/compat.js",
+        "lib/i18n/content-dict.js",
+        "content.js"
+      ],
       "run_at": "document_idle"
     }
   ],
@@ -40,5 +59,15 @@
     "32": "icons/icon32.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
-  }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "page-hook.js"
+      ],
+      "matches": [
+        "https://lordofultima.me/*"
+      ]
+    }
+  ]
 }

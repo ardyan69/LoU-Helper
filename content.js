@@ -380,6 +380,27 @@
       stop(e);
     }
   }
+  // Is the page hook running? Chrome, Edge and Firefox load it into the page from the manifest (world: MAIN);
+  // Safari (and anything that ignores that) gets it here as a <script> from the extension.
+  (function ensurePageHook() {
+    let pong = false;
+    const onPong = (e) => { if (e.source === window && e.data && e.data.__louHelper === 'pong') pong = true; };
+    window.addEventListener('message', onPong);
+    const ask = () => window.postMessage({ __louHelperCmd: 'ping' }, location.origin);
+    ask();
+    setTimeout(ask, 600);
+    setTimeout(() => {
+      window.removeEventListener('message', onPong);
+      if (pong || !alive) return;
+      try {
+        const sc = document.createElement('script');
+        sc.src = chrome.runtime.getURL('page-hook.js');
+        sc.onload = () => sc.remove();
+        (document.head || document.documentElement).appendChild(sc);
+      } catch (e) { console.warn('[LoU Helper] page hook injection failed', e); }
+    }, 1600);
+  })();
+
   // dashboard → "Refresh all cities": forget the last-sent signatures and ask the page hook for a fresh snapshot
   try {
     chrome.runtime.onMessage.addListener((m, _s, reply) => {

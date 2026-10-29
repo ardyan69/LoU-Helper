@@ -1,3 +1,4 @@
+import './lib/compat.js'; // must stay the first import (Firefox/Safari: chrome → browser)
 import { getAll, RES, RES_ICON, fullAt, emptyAt, fmtDur, fmtAgo, esc, trainingTimes } from './lib/shared.js';
 import { initLang, t } from './lib/i18n.js';
 
@@ -18,8 +19,22 @@ document.addEventListener('click', async (e) => {
   window.close();
 });
 
+// Firefox (and Safari) treat host permissions as optional: without access to the game the content
+// scripts never run, so offer the grant here. permissions.request() must run directly in the click.
+const ORIGINS = { origins: ['https://lordofultima.me/*'] };
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('#p-grant')) return;
+  chrome.permissions.request(ORIGINS).then((ok) => { if (ok) document.getElementById('p-perm').innerHTML = `<div class="mc">✅ ${t('Akses diizinkan. Refresh tab game.')}</div>`; });
+});
+async function checkAccess() {
+  let ok = true;
+  try { ok = await chrome.permissions.contains(ORIGINS); } catch { /* API missing: assume granted */ }
+  if (!ok) document.getElementById('p-perm').innerHTML = `<div class="alert">🔓 ${t('Extension belum diizinkan membaca lordofultima.me, jadi data game tidak terbaca.')} <button class="btn primary" id="p-grant" style="margin-top:6px;width:100%">${t('Izinkan akses ke lordofultima.me')}</button></div>`;
+}
+
 (async () => {
   await initLang();
+  checkAccess();
   const BTN = { kota: '🏰 ' + t('Kota'), layout: '📐 ' + t('Layout'), gerak: '🚩 ' + t('Gerak'), dungeon: '⚔️ Dungeon', game: t('Buka game') };
   document.querySelectorAll('.btns [data-open], .btn.primary[data-open]').forEach((b) => { if (BTN[b.dataset.open]) b.textContent = BTN[b.dataset.open]; });
   const { cities, settings, movements: mv } = await getAll();

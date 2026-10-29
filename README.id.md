@@ -1,8 +1,8 @@
-# LoU Revival Helper (Chrome extension)
+# LoU Revival Helper (extension browser: Chrome · Edge · Firefox · Safari)
 
 🇮🇩 Bahasa Indonesia · [English](README.md)
 
-Versi 1.17.1 · dibuat oleh **ardhie** · ardhie.andro@gmail.com
+Versi 1.18.0 · dibuat oleh **ardhie** · ardhie.andro@gmail.com
 
 Alat bantu untuk **Lord of Ultima: Revival** (lordofultima.me):
 
@@ -30,17 +30,71 @@ Alat bantu untuk **Lord of Ultima: Revival** (lordofultima.me):
 ![Pergerakan & Pelatihan](docs/screenshots/movements.png)
 
 ## Cara pasang
-1. Ekstrak ZIP ke sebuah folder.
+
+Tiap browser punya paket sendiri (semuanya dibangun dari kode sumber yang sama, lihat *Pengembangan*):
+
+| Browser | File | Versi minimal |
+|---|---|---|
+| Google Chrome (juga Brave, Opera, Vivaldi) | `lou-helper-<versi>-chrome.zip` | Chrome 111 |
+| Microsoft Edge | `lou-helper-<versi>-edge.zip` | Edge 111 |
+| Mozilla Firefox | `lou-helper-<versi>-firefox.xpi` | Firefox 128 |
+| Apple Safari (macOS) | `lou-helper-<versi>-safari.zip` | Safari 17 + Xcode |
+
+Setelah terpasang di browser mana pun: pin ikon kastil di toolbar, lalu buka (atau refresh) tab game. Dashboard dibuka lewat popup extension.
+
+### Google Chrome
+1. Ekstrak `lou-helper-<versi>-chrome.zip` ke sebuah folder.
 2. Buka `chrome://extensions`, lalu nyalakan **Developer mode** (pojok kanan atas).
-3. Klik **Load unpacked**, lalu pilih folder `lou-helper`.
-4. Pin ikon kastil di toolbar. Buka/refresh tab game.
+3. Klik **Load unpacked**, lalu pilih folder hasil ekstrak (yang berisi `manifest.json`).
+4. Klik ikon puzzle 🧩 → pin **LoU Revival Helper**.
+
+Update: timpa folder dengan versi baru, lalu klik ↻ pada kartu extension.
+
+### Microsoft Edge
+1. Ekstrak `lou-helper-<versi>-edge.zip` ke sebuah folder.
+2. Buka `edge://extensions`, lalu nyalakan **Developer mode** (sidebar kiri, atau kiri bawah).
+3. Klik **Load unpacked**, lalu pilih folder hasil ekstrak.
+4. Klik ikon puzzle 🧩 → ikon mata di samping **LoU Revival Helper** supaya tampil di toolbar.
+
+Update: timpa folder, lalu klik **Reload** pada kartu extension. Kalau saat Edge dibuka muncul peringatan "matikan extension mode developer", pilih tetap pakai.
+
+### Mozilla Firefox
+Firefox hanya memasang add-on secara permanen bila sudah ditandatangani Mozilla.
+
+**Mencoba (sementara, hilang saat Firefox ditutup)**
+1. Buka `about:debugging#/runtime/this-firefox`.
+2. Klik **Load Temporary Add-on…**, lalu pilih `lou-helper-<versi>-firefox.xpi` (atau `manifest.json` di dalam folder `firefox` hasil ekstrak).
+
+**Pasang permanen**
+- *.xpi bertanda tangan (disarankan):* tanda tangani paketnya sekali sebagai add-on unlisted (distribusi sendiri) di [addons.mozilla.org](https://addons.mozilla.org/developers/) — atau dengan `npx web-ext sign --channel=unlisted --source-dir dist/firefox --api-key … --api-secret …` — lalu seret `.xpi` yang sudah ditandatangani ke jendela Firefox dan klik **Add**.
+- *Khusus Firefox Developer Edition / Nightly / ESR:* ubah `xpinstall.signatures.required` menjadi `false` di `about:config`, lalu `about:addons` → ⚙️ → **Install Add-on From File…** → pilih file `.xpi`.
+
+**Izinkan akses ke game (wajib).** Firefox tidak otomatis memberi akses ke website. Klik ikon extension lalu tekan **Izinkan akses ke lordofultima.me**, atau buka `about:addons` → LoU Revival Helper → **Permissions** dan nyalakan *lordofultima.me*. Lalu refresh tab game.
+
+Update: muat/pasang `.xpi` versi baru (add-on sementara: klik **Reload** di `about:debugging`).
+
+### Apple Safari (macOS)
+Safari hanya menjalankan extension yang dibungkus dalam app macOS, jadi app itu dibangun sekali dengan Xcode (gratis, dari Mac App Store).
+
+1. Ekstrak `lou-helper-<versi>-safari.zip` ke sebuah folder, mis. `~/lou-helper-safari`.
+2. Di Terminal jalankan:
+   ```sh
+   xcrun safari-web-extension-converter ~/lou-helper-safari --app-name "LoU Revival Helper" --bundle-identifier id.ardhie.louhelper --macos-only
+   ```
+   Xcode akan membuka proyek yang dibuat.
+3. Di Xcode pilih target app → **Signing & Capabilities** → pilih **Team** (*Personal Team* gratis pun bisa), lalu **Product → Run** (⌘R). App kecil pembantunya akan terbuka; boleh ditutup.
+4. Di Safari: **Settings → Advanced** → nyalakan **Show features for web developers** (Safari lama: *Show Develop menu in menu bar*), lalu **Develop → Allow Unsigned Extensions** (perlu diulang setiap Safari dibuka ulang, kecuali app ditandatangani dengan akun developer berbayar).
+5. **Settings → Extensions** → centang **LoU Revival Helper**, lalu di *Edit Websites* atur **lordofultima.me** menjadi **Allow**.
+6. Refresh tab game.
+
+Notifikasi desktop (gudang penuh, serangan masuk) tidak tersedia di Safari — peringatannya tetap tampil di dashboard dan popup. Update: ganti isi folder, jalankan converter lagi (atau cukup **Product → Run** di proyek yang sudah ada setelah menyalin file baru ke dalamnya).
 
 ## Cara pakai
 - **Data kota:** buka game dan pindah ke tiap kota sekali. Buka juga daftar kota (klik nama kota di kiri atas) supaya semua kota tercatat.
 - **Jam selesai antrian:** buka panel *Construction* sekali per kota.
 - **Dungeon:** tab *Region*, lalu klik ikon dungeon atau boss. Akan muncul pesan kecil "Disimpan".
 - **Layout kota:** otomatis untuk semua kota sekaligus. Layout-nya muncul di Perencana Layout sebagai "🏰 nama kota — kondisi di game" (hanya-baca). Klik *Duplikat* untuk membuat rencana yang bisa diedit.
-- Dashboard bisa dibuka lewat popup ikon extension, atau klik kanan ikon lalu pilih *Options*.
+- Dashboard bisa dibuka lewat popup ikon extension, atau klik kanan ikon lalu pilih *Options* (Firefox: *Manage Extension* → *Preferences*).
 
 ## Bahasa
 Pengaturan → 🌐 Bahasa: Bahasa Indonesia, English, Español, Français, Deutsch, Italiano, Magyar, Ελληνικά, atau **Ikuti bahasa game** (otomatis memakai bahasa yang dipilih di game). Nama bangunan & istilah game tetap memakai nama dari game.
@@ -49,7 +103,7 @@ Pengaturan → 🌐 Bahasa: Bahasa Indonesia, English, Español, Français, Deut
 Ikon & nama bangunan di Perencana Layout diambil dari game saat kamu membuka **Build bar**, **Guide → Your city & the grid** (node alam), dan panel **Town Hall**. Ikon disimpan lokal di browser (tidak dibundel di extension); sebelum tertangkap, emoji dipakai sebagai cadangan.
 
 ## Keamanan
-Extension ini **membaca** data yang sudah ada di halaman game (teks di layar dan data kota milik game). Extension tidak mengklik apa pun dan tidak mengotomasi permainan. Ada satu pengecualian, dan hanya terjadi saat kamu klik dan mengonfirmasi: **🎩 Set Ministers → Terapkan ke game** mengirim setelan minister (Build, Defense, War, Trade, serta menyalakan/mematikan minister) memakai perintah yang sama dengan layar Ministers di game. Tidak ada hal lain yang dikirim ke game. Semua data disimpan lokal di `chrome.storage` di browser kamu.
+Extension ini **membaca** data yang sudah ada di halaman game (teks di layar dan data kota milik game). Extension tidak mengklik apa pun dan tidak mengotomasi permainan. Ada satu pengecualian, dan hanya terjadi saat kamu klik dan mengonfirmasi: **🎩 Set Ministers → Terapkan ke game** mengirim setelan minister (Build, Defense, War, Trade, serta menyalakan/mematikan minister) memakai perintah yang sama dengan layar Ministers di game. Tidak ada hal lain yang dikirim ke game. Semua data disimpan lokal di penyimpanan extension browser kamu (`chrome.storage` / `browser.storage`).
 
 ## Catatan
 - Layout dari share string tidak membawa level (dianggap level 10); layout sinkron otomatis memakai level asli. Bonus riset diperkirakan dari produksi nyata kota.
@@ -59,10 +113,14 @@ Extension ini **membaca** data yang sudah ada di halaman game (teks di layar dan
 - Kalau tampilan game berubah (update), pembaca data mungkin perlu disesuaikan. Logikanya ada di `content.js`.
 
 ## Pengembangan
-Tanpa build step dan tanpa dependency. Dengan Node 18+:
+Node 18+. Folder sumbernya sendiri sudah berupa extension Chrome/Edge (bisa langsung *Load unpacked*, tanpa build); Firefox dan Safari butuh langkah build kecil.
 
-- `node --test tests/*.test.mjs` — tes rumus game (produksi, kapasitas, troop space, recruit %), template layout, dan urutan bangun.
-- `node tests/i18n-check.mjs` — semua teks UI harus ada di semua file bahasa (`--unused` juga menampilkan key yang tidak lagi ditemukan di kode).
+- `npm install` — sekali saja (esbuild untuk bundel background Firefox/Safari, web-ext untuk lint Firefox).
+- `npm run build` — membangun `dist/chrome`, `dist/edge`, `dist/firefox` dan `dist/safari` beserta `dist/lou-helper-<versi>-<browser>.zip` (Firefox: `.xpi`). Satu browser saja: `node tools/build.mjs firefox`.
+- `npm run lint:firefox` — mengecek paket Firefox dengan linter Mozilla.
+- `npm test` — tes rumus game (produksi, kapasitas, troop space, recruit %), template layout, urutan bangun, operasi & minister, dan cek terjemahan (semua teks UI harus ada di semua file bahasa; `node tests/i18n-check.mjs --unused` juga menampilkan key yang tidak lagi ditemukan di kode).
+
+Yang diubah build per browser: Firefox memakai background *event page* (`background.js` dibundel) dan id `browser_specific_settings.gecko`; Safari memakai background service worker klasik, tanpa izin `notifications`, dan page hook disisipkan oleh `content.js` (bukan content script `world: "MAIN"`). `lib/compat.js` memetakan `chrome.*` ke `browser.*` bila perlu.
 
 ## Credit
 - Dibuat oleh **ardhie** — ardhie.andro@gmail.com

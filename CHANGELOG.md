@@ -4,6 +4,10 @@
 
 Made by **ardhie** (ardhie.andro@gmail.com).
 
+## v1.18.0 — 2026-10-30
+
+- 🌐 Now available for Chrome, Edge, Firefox & Safari: one source built per browser with npm run build (Firefox as an .xpi, Safari through the Xcode converter). The popup shows an Allow access button when the browser has not granted access to lordofultima.me yet, notifications are skipped automatically in browsers that do not support them, and the README explains how to install it in each browser.
+
 ## v1.17.1 — 2026-10-30
 
 - ⚡ Set Ministers → Apply to game is much faster: all settings are sent at once (not one by one), count as done as soon as the game answers or its data has changed, and the view updates right away. ⚔️ War: max level & raid count are chosen so almost all raiding troops are used (with a loot/h estimate), troops out raiding are counted, raids switch off while an attack is incoming, frontline cities only send attackers, and the radius comes from dungeons around the max level. 🛒 Trade: one hub per continent (carts only travel over land) picked by capacity, carts & position; cities alone on a continent request by sea if they have ships; military cities' food target comes from army upkeep at full TS; a L10 Moonglow Tower purifies surplus; the minimum shipment follows the hub's carts.

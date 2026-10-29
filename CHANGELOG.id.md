@@ -4,6 +4,10 @@
 
 Dibuat oleh **ardhie** (ardhie.andro@gmail.com).
 
+## v1.18.0 — 2026-10-30
+
+- 🌐 Kini tersedia untuk Chrome, Edge, Firefox & Safari: satu kode sumber yang dibangun per browser dengan npm run build (Firefox sebagai .xpi, Safari lewat konverter Xcode). Popup menampilkan tombol Izinkan akses bila browser belum memberi izin ke lordofultima.me, notifikasi otomatis dilewati di browser yang tidak mendukungnya, dan README berisi cara pasang untuk tiap browser.
+
 ## v1.17.1 — 2026-10-30
 
 - ⚡ Set Ministers → Terapkan ke game jauh lebih cepat: semua setelan dikirim sekaligus (bukan satu per satu), dianggap berhasil begitu game menjawab atau datanya sudah berubah, dan tampilan langsung diperbarui. ⚔️ War: level maks & jumlah raid dipilih supaya hampir semua pasukan raid terpakai (dengan perkiraan loot/jam), pasukan yang sedang raid ikut dihitung, raid dimatikan saat ada serangan masuk, kota garis depan hanya mengirim unit penyerang, radius dari dungeon di sekitar level maks. 🛒 Trade: satu hub per benua (gerobak hanya lewat darat) dipilih dari kapasitas, gerobak & posisi; kota sendirian di benua minta lewat laut bila punya kapal; target makanan kota militer dari makan pasukan saat TS penuh; Moonglow L10 memurnikan kelebihan; kiriman minimum mengikuti jumlah gerobak hub.

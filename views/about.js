@@ -34,7 +34,7 @@ function readme() {
   return `<div class="about">
     <div class="card">
       <h3>${t('Apa ini?')}</h3>
-      <p>${t('Chrome extension pembantu untuk <b>Lord of Ultima: Revival</b> (<a href="https://lordofultima.me/" target="_blank">lordofultima.me</a>). Semua data dibaca dari game yang sedang kamu buka — tanpa input manual.')}</p>
+      <p>${t('Extension browser (Chrome, Edge, Firefox &amp; Safari) pembantu untuk <b>Lord of Ultima: Revival</b> (<a href="https://lordofultima.me/" target="_blank">lordofultima.me</a>). Semua data dibaca dari game yang sedang kamu buka — tanpa input manual.')}</p>
     </div>
     <div class="about-grid">
       <div class="card"><h3>🏰 ${t('Ringkasan Kota')}</h3><ul>
@@ -56,8 +56,9 @@ function readme() {
     </div>
     <div class="about-grid">
       <div class="card"><h3>${t('Cara pasang / update')}</h3><ol>
-        <li>${t('Ekstrak ZIP, buka <code>chrome://extensions</code>, nyalakan <b>Developer mode</b>.')}</li>
-        <li>${t('<b>Load unpacked</b> → pilih folder <code>lou-helper</code> (update: timpa folder lalu klik ↻).')}</li>
+        <li>${t('<b>Chrome / Edge:</b> ekstrak ZIP, buka <code>chrome://extensions</code> atau <code>edge://extensions</code>, nyalakan <b>Developer mode</b> → <b>Load unpacked</b> → pilih foldernya (update: timpa folder lalu klik ↻).')}</li>
+        <li>${t('<b>Firefox:</b> pasang file <code>.xpi</code> (perlu ditandatangani Mozilla), atau untuk mencoba: <code>about:debugging</code> → This Firefox → <b>Load Temporary Add-on</b>. Izinkan akses ke lordofultima.me lewat popup extension.')}</li>
+        <li>${t('<b>Safari (macOS):</b> ubah folder safari menjadi app dengan <code>xcrun safari-web-extension-converter</code> di Xcode, jalankan, lalu aktifkan di Safari → Settings → Extensions. Langkah lengkap ada di README.')}</li>
         <li>${t('Pin ikon kastil di toolbar, lalu buka game.')}</li></ol></div>
       <div class="card"><h3>${t('Tips')}</h3><ul>
         <li>${t('Buka <b>Build bar</b>, <b>Guide → Your city &amp; the grid</b>, dan klik <b>Town Hall</b> sekali agar ikon game lengkap.')}</li>

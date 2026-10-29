@@ -1,3 +1,4 @@
+import './lib/compat.js'; // must stay the first import (Firefox/Safari: chrome → browser)
 import { getAll, set, fmtAgo } from './lib/shared.js';
 import * as cities from './views/cities.js';
 import * as layout from './views/layout.js';
