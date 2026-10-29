@@ -4,6 +4,14 @@
 
 Made by **ardhie** (ardhie.andro@gmail.com).
 
+## v1.12.0 — 2026-10-29
+
+- 🎯 Raid Planner on the Dungeon tab: pick a city and the extension suggests the nearest dungeons that fit its troops, troops per dungeon (Revival formulas), loot per hour, and how many raids until 100% explored.
+- Cheat Sheet → Recruit %: recruit speed % is filled in automatically from the city layout (recruitment buildings + bordering Barracks, game formula).
+- Automatic speed calibration: each unit's minutes/field is calculated from the troop movements read from the game (can be turned off in Settings).
+- City Overview no longer depends on the game language; resources & queues of all cities also update from the game data without opening each city.
+- Default raid prepare/unload time is now 0 (Revival raids go straight there and back).
+
 ## v1.11.1 — 2026-10-29
 
 - Settings → Units now use real Revival game data: carry, base speed (minutes/field), and power (attack ÷ 50); Sloop, Frigate and War Galleon added. Old settings are upgraded automatically (calibrated speeds are kept).

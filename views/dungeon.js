@@ -1,11 +1,13 @@
 import { fmtNum, fmtDur, fmtAgo, dist, esc, uid } from '../lib/shared.js';
 import { t, locale } from '../lib/i18n.js';
+import * as planner from './raidplan.js';
 
 const TYPES = ['Forest', 'Hill', 'Mountain', 'Sea'];
 const TYPE_ID = { Forest: 'Forest', Hill: 'Hill', Mountain: 'Mountain', Sea: 'Sea' }; // game names (English)
 const TYPE_ICON = { Forest: '🌲', Hill: '⛰️', Mountain: '🏔️', Sea: '🌊' };
 
-let root, ctx, selKey = null;
+let root, ctx, selKey = null, part = 'list';
+try { part = localStorage.getItem('lou-dg-part') || 'list'; } catch {}
 const f = { type: 'all', minL: 1, maxL: 10, from: 'nearest', maxD: 0, maxExp: 100, q: '', sort: 'dist', dir: 1 };
 
 export function mount(el, c) {
@@ -17,8 +19,14 @@ export function mount(el, c) {
         <h2>${t('Dungeon &amp; Boss')}</h2>
         <p>${t('Semua dungeon/boss yang dimuat peta Region game otomatis tersimpan di sini (level, explored %). Guardians &amp; max loot terisi saat panelnya dibuka.')}</p>
       </div>
+      <div class="seg" id="d-seg">
+        <button data-part="list">📋 ${t('Daftar')}</button>
+        <button data-part="plan">🎯 Raid Planner</button>
+      </div>
       <button class="btn" id="d-add">+ ${t('Tambah manual')}</button>
     </div>
+    <div id="d-plan"></div>
+    <div id="d-list">
     <div class="toolbar card">
       <label class="field">${t('Tipe')}
         <select id="f-type"><option value="all">${t('Semua')}</option>${TYPES.map((ty) => `<option value="${ty}">${TYPE_ICON[ty]} ${TYPE_ID[ty]}</option>`).join('')}<option value="boss">👹 Boss</option></select></label>
@@ -35,6 +43,7 @@ export function mount(el, c) {
         <div class="card" id="d-calc"></div>
         <div class="card" id="d-stats"></div>
       </div>
+    </div>
     </div>
     <dialog id="d-dlg"><form method="dialog" id="d-form">
       <h3>${t('Tambah / ubah dungeon')}</h3>
@@ -59,6 +68,14 @@ export function mount(el, c) {
     });
   }
   root.querySelector('#d-add').onclick = () => openDialog(null);
+  planner.mount(root.querySelector('#d-plan'), ctx);
+  root.querySelector('#d-seg').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-part]');
+    if (!b) return;
+    part = b.dataset.part;
+    try { localStorage.setItem('lou-dg-part', part); } catch {}
+    showPart();
+  });
   root.querySelector('#d-dlg').addEventListener('close', saveDialog);
 
   root.querySelector('#d-table').addEventListener('click', async (e) => {
@@ -91,7 +108,16 @@ export function mount(el, c) {
   });
 }
 
+function showPart() {
+  root.querySelectorAll('#d-seg [data-part]').forEach((b) => b.classList.toggle('on', b.dataset.part === part));
+  root.querySelector('#d-list').classList.toggle('hide', part !== 'list');
+  root.querySelector('#d-plan').classList.toggle('hide', part !== 'plan');
+  root.querySelector('#d-add').classList.toggle('hide', part !== 'list');
+  if (part === 'plan') planner.render();
+}
+
 export function render(state) {
+  showPart();
   const from = root.querySelector('#f-from');
   const cities = Object.values(state.cities).sort((a, b) => String(a.name).localeCompare(String(b.name), 'id', { numeric: true }));
   from.innerHTML = `<option value="nearest">${t('Kota terdekat (otomatis)')}</option>` +
@@ -104,6 +130,7 @@ export function render(state) {
 }
 export function onData(state, keys) {
   if (!root.classList.contains('on')) return;
+  if (part === 'plan') { if (keys.some((k) => ['dungeons', 'cities', 'movements', 'settings'].includes(k))) planner.render(); return; }
   if (keys.includes('dungeons') || keys.includes('cities')) { renderTable(); if (keys.includes('dungeons')) renderCalcHead(); }
   if (keys.includes('raids')) renderStats();
   if (keys.includes('settings')) renderCalc();

@@ -67,7 +67,7 @@ function updateIncoming() {
 
 function updateLive() {
   updateIncoming();
-  const latest = Math.max(0, ...Object.values(ctx.state.cities).map((c) => c.seenAt || 0));
+  const latest = Math.max(0, ...Object.values(ctx.state.cities).map((c) => Math.max(c.syncedAt || 0, c.seenAt || 0)));
   const live = Date.now() - latest < 2 * 60 * 1000;
   const el = document.getElementById('live');
   el.querySelector('.status-dot').classList.toggle('live', live);

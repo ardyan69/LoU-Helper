@@ -5,7 +5,7 @@
 // Nothing here sends anything to the game server or changes the game.
 (() => {
   // versioned guard: a newer hook (after an extension update) may install next to an older one
-  const HOOK_V = 2;
+  const HOOK_V = 3;
   if ((window.__louHelperPageHookV || 0) >= HOOK_V) return;
   window.__louHelperPageHookV = HOOK_V;
   window.__louHelperPageHook = true;
@@ -112,7 +112,7 @@
 
   const names = new Map(); // entity id -> label info (from the map / own cities)
   const atXY = new Map(); // "x:y" -> same label, to name where an attack comes from
-  let lastMapVer = -1, lastMovSig = '';
+  let lastMapVer = -1, lastMovSig = '', lastCitySig = '';
   const plain = (o) => { try { return JSON.parse(JSON.stringify(o)); } catch (_) { return null; } };
   function snapStore() {
     const S = findStore();
@@ -154,6 +154,21 @@
     const data = { serverOffset: S.serverOffset || 0, lang: (S.player && S.player.lang) || null, armies, incoming, incomingTrades, training, marketMine };
     const sig = JSON.stringify(data, (key, v) => (key === 'serverOffset' ? undefined : v));
     if (sig !== lastMovSig) { lastMovSig = sig; post({ kind: 'movements', data }); }
+    // language-independent city summary: resources (exact at resAt), build queue, troops at home
+    const sum = cities.map((c) => {
+      const q = Array.isArray(c.buildQueue) ? c.buildQueue : [];
+      const first = q.find((o) => o.endAt) || null;
+      let end = first ? first.endAt : null;
+      if (end) for (const o of q) if (o !== first && !o.endAt) end += o.durationMs || 0;
+      return {
+        id: c.id, name: c.name, x: c.x, y: c.y, cont: c.continent, water: !!c.water, castle: !!c.castle,
+        res: c.res ? { wood: c.res.wood, stone: c.res.stone, iron: c.res.iron, food: c.res.food, gold: c.res.gold } : null,
+        resAt: c.resAt || null, queue: { count: q.length, nextAt: first ? first.endAt : null, endsAt: end },
+        home: c.units || {}
+      };
+    });
+    const cSig = JSON.stringify(sum.map((c) => [c.id, c.name, c.resAt, c.queue, c.home]));
+    if (cSig !== lastCitySig) { lastCitySig = cSig; post({ kind: 'cities-store', serverOffset: S.serverOffset || 0, cities: sum }); }
     for (const c of cities) postCity(c); // every city's layout, not just the open one
     return true;
   }

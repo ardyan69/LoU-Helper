@@ -45,7 +45,7 @@ document.addEventListener('click', async (e) => {
     return { c, first, empty };
   }).sort((a, b) => (a.first?.t ?? Infinity) - (b.first?.t ?? Infinity));
 
-  const latest = Math.max(0, ...Object.values(cities).map((c) => c.seenAt || 0));
+  const latest = Math.max(0, ...Object.values(cities).map((c) => Math.max(c.syncedAt || 0, c.seenAt || 0)));
   document.getElementById('p-live').textContent = latest ? t('update {x}', { x: fmtAgo(latest) }) : '';
 
   const el = document.getElementById('p-list');

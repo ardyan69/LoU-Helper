@@ -97,7 +97,7 @@ export function render(state) {
     <div class="stat"><div class="k">${t('Antrian kosong')}</div><div class="v num" style="color:${idleQueues ? 'var(--warn)' : 'inherit'}">${idleQueues}</div></div>
     <div class="stat"><div class="k">${t('Gudang ≥{p}% dalam 2 jam', { p: pct })}</div><div class="v num" style="color:${soonFull ? 'var(--warn)' : 'inherit'}">${soonFull}</div></div>`;
 
-  const latest = Math.max(0, ...list.map((c) => c.seenAt || 0));
+  const latest = Math.max(0, ...list.map((c) => Math.max(c.syncedAt || 0, c.seenAt || 0)));
   root.querySelector('#c-stale').innerHTML = latest && now - latest > 5 * 60000
     ? `<div class="banner">⚠️ ${t('Data terakhir masuk <b>{x}</b>. Kalau game sedang terbuka tapi angka tidak bergerak, refresh tab game (F5) sekali. Ingat: tiap kota hanya terbaca saat kota itu sedang aktif di game — angka di bawah tetap diproyeksikan dari produksi/jam.', { x: fmtAgo(latest) })}</div>`
     : '';
@@ -175,7 +175,7 @@ function delCell(c) { return `<td><button class="btn sm danger" data-del="${c.ke
 // ---------- table: one row per city ----------
 function tableList(list, pct, now) {
   const rows = list.map((c) => {
-    const stale = !c.seenAt || now - c.seenAt > 6 * 3.6e6;
+    const stale = now - Math.max(c.syncedAt || 0, c.seenAt || 0) > 6 * 3.6e6;
     const first = (() => {
       let best = null;
       for (const r of RES) { const i = resInfo(c, r, pct, now); if (i?.etaAt && (!best || i.etaAt < best.i.etaAt)) best = { r, i }; }
@@ -194,9 +194,9 @@ function tableList(list, pct, now) {
       <td>${first}</td>
       <td>${queueCell(c, now)}</td>
       <td class="r num ${c.buildings && c.buildings.used >= c.buildings.max ? 'warn-t' : ''}">${c.buildings ? `${c.buildings.used}/${c.buildings.max}` : '—'}</td>
-      <td class="r num">${c.troops != null ? fmtNum(c.troops) : '—'}</td>
+      <td class="r num">${c.troops != null ? fmtNum(c.troops) : c.troopsHome != null ? fmtNum(c.troopsHome) : '—'}</td>
       <td class="r num">${c.score != null ? fmtNum(c.score) : '—'}</td>
-      <td class="small muted">${c.seenAt ? fmtAgo(c.seenAt) : '—'}</td>
+      <td class="small muted">${c.syncedAt || c.seenAt ? fmtAgo(Math.max(c.syncedAt || 0, c.seenAt || 0)) : '—'}</td>
       ${delCell(c)}
     </tr>`;
   }).join('');
@@ -214,7 +214,7 @@ function tableDetail(list, pct, now) {
   const tot = {};
   for (const r of RES) tot[r] = { v: 0, vx: 0, cap: 0, rate: 0 };
   const rows = list.map((c) => {
-    const stale = !c.seenAt || now - c.seenAt > 6 * 3.6e6;
+    const stale = now - Math.max(c.syncedAt || 0, c.seenAt || 0) > 6 * 3.6e6;
     const cells = RES.map((r) => {
       const i = resInfo(c, r, pct, now);
       if (!i) return '<td class="muted gs">—</td><td></td><td></td><td></td><td></td>';
@@ -232,7 +232,7 @@ function tableDetail(list, pct, now) {
       <td class="r num">${c.res?.gold ? '+' + fmtNum(c.res.gold.rate) : ''}</td>
       <td class="gs">${queueCell(c, now)}</td>
       <td class="r num">${c.buildings ? `${c.buildings.used}/${c.buildings.max}` : '—'}</td>
-      <td class="small muted">${c.seenAt ? fmtAgo(c.seenAt) : '—'}</td>
+      <td class="small muted">${c.syncedAt || c.seenAt ? fmtAgo(Math.max(c.syncedAt || 0, c.seenAt || 0)) : '—'}</td>
       ${delCell(c)}
     </tr>`;
   }).join('');
@@ -252,7 +252,7 @@ function tableDetail(list, pct, now) {
 }
 
 function card(c, pct, now) {
-  const stale = !c.seenAt || now - c.seenAt > 6 * 3.6e6;
+  const stale = now - Math.max(c.syncedAt || 0, c.seenAt || 0) > 6 * 3.6e6;
   const pills = [];
   if (c.group) pills.push(`<span class="pill">${esc(c.group)}</span>`);
   if (c.buildings) pills.push(`<span class="pill ${c.buildings.used >= c.buildings.max ? 'warn' : ''}">🏠 ${c.buildings.used}/${c.buildings.max}</span>`);

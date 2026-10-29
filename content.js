@@ -61,7 +61,7 @@
   // ---------- storage ----------
   function update(field, key, patch, force) {
     if (!alive) return Promise.resolve();
-    const VOLATILE = new Set(['seenAt', 'v', 'at', 'endsAt', 'nextAt', 'measuredAt']);
+    const VOLATILE = new Set(['seenAt', 'v', 'at', 'endsAt', 'nextAt', 'measuredAt', 'syncedAt', 'storeAt']);
     const sig = JSON.stringify(patch, (k, v) => (VOLATILE.has(k) ? undefined : v));
     const lw = lastWrite[field + key];
     const now = Date.now();
@@ -111,24 +111,27 @@
     const c = parseCoord(chip.querySelector('.sub')?.textContent);
     if (!c) return;
     const name = chip.querySelector('.name')?.textContent.trim() || c.key;
+    // Resource bar: the resource comes from data-tour="res-<kind>" and the numbers by position,
+    // so this works in every game language ("<Wood> 34630 <of> 122000, 330 <per hour>").
     const res = {};
-    document.querySelectorAll('.topbar button.res, button.res').forEach((b) => {
-      const m = aria(b).match(/^(Wood|Stone|Iron|Food|Gold)\s+(-?[\d.,]+)(?:\s+of\s+([\d.,]+))?,\s*(-?[\d.,]+)\s+per\s+hour/i);
-      if (!m) return;
-      const k = RES_MAP[m[1].toLowerCase()];
-      res[k] = { v: parseNum(m[2]), rate: parseNum(m[4]) };
-      if (m[3]) res[k].cap = parseNum(m[3]);
+    document.querySelectorAll('button.res[data-tour^="res-"]').forEach((b) => {
+      const k = RES_MAP[b.dataset.tour.slice(4)];
+      if (!k) return;
+      const nums = (aria(b).match(/-?\d[\d.,]*/g) || []).map(parseNum).filter((n) => n != null);
+      if (nums.length < 2) return;
+      if (nums.length >= 3) res[k] = { v: nums[0], cap: nums[1], rate: nums[2] };
+      else res[k] = { v: nums[0], rate: nums[1] };
     });
     if (!Object.keys(res).length) return;
     const now = Date.now();
     const patch = { key: c.key, name, cont: c.cont, x: c.x, y: c.y, res, seenAt: now };
 
-    let qCount = null, bUsed = null, bMax = null;
-    document.querySelectorAll('button[aria-label]').forEach((b) => {
-      const a = aria(b);
-      let m;
-      if ((m = a.match(/^Construction queue(?:,\s*(\d+))?/i))) qCount = m[1] ? +m[1] : 0;
-      if ((m = a.match(/^Buildings\s+(\d+)\s+of\s+(\d+)/i))) { bUsed = +m[1]; bMax = +m[2]; }
+    // queue size: the construction-queue button's number; buildings: the "79/80" pill (both language-free)
+    const qBtn = document.querySelector('[data-tour="fab-queue"]');
+    let qCount = qBtn ? parseNum((qBtn.textContent.match(/\d+/) || ['0'])[0]) : null, bUsed = null, bMax = null;
+    document.querySelectorAll('.city-pill, button[aria-label]').forEach((b) => {
+      const m = b.textContent.trim().match(/^(\d+)\s*\/\s*(\d+)$/);
+      if (m && bUsed == null && b.classList.contains('city-pill')) { bUsed = +m[1]; bMax = +m[2]; }
     });
     if (bUsed != null) patch.buildings = { used: bUsed, max: bMax };
 
@@ -247,11 +250,34 @@
     if (e.data.__louHelper === 'share-string') onShareString(String(e.data.text));
     if (e.data.__louHelper === 'city-state') onCityState(e.data);
     if (e.data.__louHelper === 'movements') onMovements(e.data.data);
+    if (e.data.__louHelper === 'cities-store' && capture.cities) onCitiesStore(e.data);
     if (e.data.__louHelper === 'map-dungeons' && capture.dungeons) onMapDungeons(e.data.dungeons);
   });
 
   // Armies, incoming attacks, trades, recruitment (from the game's own state)
   let lastMovWrite = 0, movTimer = null, pendingMov = null;
+  // All cities from the game's store (language-independent): exact resources, build queue, troops at home.
+  function onCitiesStore(d) {
+    if (!alive || !Array.isArray(d.cities)) return;
+    const off = d.serverOffset || 0; // server time = local time + offset
+    for (const c of d.cities) {
+      if (c.x == null || c.y == null) continue;
+      const key = `${c.x}:${c.y}`;
+      const patch = { key, name: c.name, cont: c.cont, x: c.x, y: c.y, water: c.water, gameId: c.id };
+      if (c.res && c.resAt) {
+        patch.res = {};
+        for (const k of ['wood', 'stone', 'iron', 'food', 'gold']) if (typeof c.res[k] === 'number') patch.res[k] = { v: Math.round(c.res[k]) };
+        patch.storeAt = c.resAt - off;
+        patch.seenAt = patch.storeAt; // values are exact at that moment; projections run from there
+      }
+      patch.syncedAt = Date.now();
+      const q = c.queue || {};
+      patch.queue = { count: q.count || 0, nextAt: q.nextAt ? q.nextAt - off : null, endsAt: q.endsAt ? q.endsAt - off : null, measuredAt: Date.now() };
+      patch.troopsHome = Object.values(c.home || {}).reduce((a, n) => a + (n || 0), 0);
+      update('cities', key, patch, false);
+    }
+  }
+
   function onMovements(data) {
     if (!alive || !data) return;
     if (data.lang && data.lang !== gameLangSeen) applyLang(langSetting, data.lang);

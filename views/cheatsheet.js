@@ -4,7 +4,7 @@ import { t, locale } from '../lib/i18n.js';
 import {
   REV_UNITS, unitById, EFF, REV_DUNGEONS, DUNGEON_KINDS, DUNGEON_UNITS, dungeonLevel, dungeonNeed, raid, unitEff, progressMult,
   REV_BOSSES, BOSS_KINDS, BOSS_UNITS, BOSS_HP, BOSS_LOOT, BOSS_GOLD, bossNeed, bossFight,
-  RECRUIT_GROUPS, RECRUIT_BLD_PCT, recruitTime, pctFor, COMMUNITY, RECRUIT_BLOCKS, RECRUIT_CAP, SHEET_NAMES, LAYOUTS, LAYOUT_URL
+  RECRUIT_GROUPS, RECRUIT_BLD_PCT, recruitTime, pctFor, COMMUNITY, RECRUIT_BLOCKS, RECRUIT_CAP, SHEET_NAMES, LAYOUTS, LAYOUT_URL, cityRecruitPct
 } from '../lib/cheatsheet.js';
 
 const LV = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
@@ -15,7 +15,7 @@ const st = { part: 'dungeons', src: 'rev', prog: 0, kind: 'all', boss: 'all', la
 try { Object.assign(st, JSON.parse(localStorage.getItem('lou-cheat') || '{}')); } catch {}
 const persist = () => { try { localStorage.setItem('lou-cheat', JSON.stringify(st)); } catch {} };
 
-let root;
+let root, ctx;
 const num = (n) => (n == null || isNaN(n) ? '—' : Math.round(n).toLocaleString(locale()));
 const rate = (v) => (v < 10 ? v.toFixed(1).replace(/\.0$/, '') : num(Math.floor(v)));
 const pct = (f, d = 0) => (f * 100).toFixed(d).replace(/\.0+$/, '') + '%';
@@ -29,8 +29,9 @@ const fmtSec = (s) => {
 const splitPills = (s) => ['wood', 'stone', 'iron', 'food'].map((r) => `<span class="pill">${RES_ICON[r]} ${s[r]}%</span>`).join(' ');
 const lvHead = (first = t('Unit')) => `<tr><th>${first}</th>${LV.map((l) => `<th class="num">L${l}</th>`).join('')}</tr>`;
 
-export function mount(el) {
+export function mount(el, c) {
   root = el;
+  ctx = c;
   root.innerHTML = `
     <div class="view-head">
       <div class="grow"><h2>📜 Cheat Sheet</h2><p>${t('Jumlah pasukan minimum/rekomendasi untuk Dungeon & Boss tiap level dan tipe, kecepatan rekrut, dan statistik pasukan.')}</p></div>
@@ -73,7 +74,8 @@ function onInput(e) {
   if (el.id === 'cs-prog') { st.prog = clamp(+el.value, 0, 100); persist(); renderTables(); return; }
   if (el.dataset.calc) { st.calc[el.dataset.calc] = el.type === 'number' ? +el.value : el.value; persist(); if (el.dataset.calc === 'kind') { fixUnit(st.calc, DUNGEON_UNITS); render(); } else paintCalc(); return; }
   if (el.dataset.bcalc) { st.bcalc[el.dataset.bcalc] = el.type === 'number' ? +el.value : el.value; persist(); if (el.dataset.bcalc === 'kind') { fixUnit(st.bcalc, BOSS_UNITS, true); render(); } else paintBossCalc(); return; }
-  if (el.dataset.grp != null) { st.pct[el.dataset.grp] = Math.max(0, +el.value || 0); persist(); renderRecruitTables(); }
+  if (el.dataset.grp != null) { st.pct[el.dataset.grp] = Math.max(0, +el.value || 0); st.recCity = ''; persist(); paintRecCity(); renderRecruitTables(); }
+  if (el.id === 'cs-rec-city') { st.recCity = el.value; fillFromCity(); persist(); render(); }
 }
 const clamp = (v, a, b) => Math.min(b, Math.max(a, isNaN(v) ? a : v));
 function fixUnit(c, pool, boss) {
@@ -96,7 +98,7 @@ export function render() {
     : (com ? comDungeons() : revDungeons());
   if (!com && st.part === 'dungeons') { renderTables(); paintCalc(); }
   if (!com && st.part === 'bosses') paintBossCalc();
-  if (!com && st.part === 'recruit') renderRecruitTables();
+  if (!com && st.part === 'recruit') { paintRecCity(); renderRecruitTables(); }
 }
 
 // ================= Dungeons (Revival) =================
@@ -272,6 +274,10 @@ function revRecruit() {
     </div>
     <div class="card cs-card">
       <h3>⏱️ ${t('Recruit speed % kotamu')}</h3>
+      <div class="toolbar">
+        <label class="field">🏰 ${t('Isi otomatis dari kota')}<select id="cs-rec-city"><option value="">— ${t('manual')} —</option>${liveCities().map((l) => `<option value="${l.id}" ${st.recCity === l.id ? 'selected' : ''}>${esc(l.cityName || l.name)}${l.cityKey ? ` (${l.cityKey})` : ''}</option>`).join('')}</select></label>
+        <span class="small muted grow" id="cs-rec-info"></span>
+      </div>
       <div class="toolbar">${RECRUIT_GROUPS.map((g, i) => `<label class="field">${esc(g.bld)}<input type="number" min="0" step="5" data-grp="${i}" value="${st.pct[i] || 0}"></label>`).join('')}</div>
       <p class="small muted">${t('Efek per bangunan (level 1→10)')}: ${RECRUIT_BLD_PCT.map((p, i) => `L${i + 1} ${p}%`).join(' · ')}</p>
       <div class="tbl-wrap" id="cs-rec-now"></div>
@@ -281,6 +287,25 @@ function revRecruit() {
       <p class="small muted">${t('Kolom = target waktu per unit. Hijau = sudah tercapai dengan % kotamu.')} ${t('"—" = butuh lebih dari {c}% (≈ 100 bangunan rekrut level 10 × 150%), praktis tidak bisa dicapai.', { c: num(RECRUIT_CAP) })}</p>
     </div>
     <div id="cs-rec-need"></div>`;
+}
+// cities whose real layout is synced from the game
+const liveCities = () => (ctx?.state?.layouts || []).filter((l) => l.source === 'game' && l.live).sort((a, b) => String(a.cityName).localeCompare(String(b.cityName), 'id', { numeric: true }));
+function fillFromCity() {
+  const l = liveCities().find((x) => x.id === st.recCity);
+  if (!l) { st.recCity = ''; return null; }
+  const r = cityRecruitPct(l);
+  r.forEach((g, i) => { st.pct[i] = g.pct; });
+  return { l, r };
+}
+function paintRecCity() {
+  const info = root.querySelector('#cs-rec-info'), sel = root.querySelector('#cs-rec-city');
+  if (!info) return;
+  if (sel) sel.value = st.recCity || '';
+  const f = st.recCity ? fillFromCity() : null;
+  if (!f) { info.textContent = t('Pilih kota untuk mengisi recruit speed % dari layout kotanya (sinkron otomatis dari game).'); return; }
+  const parts = f.r.map((g, i) => (g.n ? `${RECRUIT_GROUPS[i].bld} ×${g.n}${g.barracks ? ` + ${g.barracks} Barracks` : ''} = ${g.pct}%` : null)).filter(Boolean);
+  info.innerHTML = `${t('Dari layout {c}', { c: `<b>${esc(f.l.cityName || f.l.name)}</b>` })}: ${parts.length ? esc(parts.join(' · ')) : t('belum ada bangunan rekrut')}`;
+  root.querySelectorAll('[data-grp]').forEach((inp) => { inp.value = st.pct[inp.dataset.grp] || 0; });
 }
 function renderRecruitTables() {
   const now = root.querySelector('#cs-rec-now'), need = root.querySelector('#cs-rec-need');

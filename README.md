@@ -2,15 +2,15 @@
 
 🇬🇧 English · [Bahasa Indonesia](README.id.md)
 
-Version 1.11.1 · made by **ardhie** · ardhie.andro@gmail.com
+Version 1.12.0 · made by **ardhie** · ardhie.andro@gmail.com
 
 A helper for **Lord of Ultima: Revival** (lordofultima.me):
 
 1. **City Overview**: resources, capacity, production per hour, when the warehouse fills up or food runs out, and the build queue status of every city. Includes desktop notifications.
 2. **Layout Planner**: a 21×21 map identical to the game (walls, towers, roads, Town Hall, water cities). Production is calculated with the official game formulas. The active city's layout syncs automatically from the game, with real building levels and the build queue (share strings from the City planner are accepted too). Includes **🧠 Recommendation** (an optimizer that places production, processing buildings & Cottages around natural nodes for maximum output: max wood/stone/iron/food, balanced, or a custom ratio; optionally removes natural nodes when each node adds production above a threshold), a "best tiles" heatmap, plan vs city comparison (what to build/demolish), per-building levels, undo/redo, and share-string export that can be *Import*ed directly in the game.
 3. **Movements**: all moving armies (raid/return/attack/support…, cargo, countdown), ⚠️ incoming attacks (desktop notification), trade/Market convoys (outgoing, returning, incoming deliveries), and the troop training queue + troops in each city.
-4. **Dungeons & Bosses**: every dungeon/boss loaded on the Region map is saved automatically (level & explored %); guardians/max loot are filled in when its panel is opened. Includes filters, distance to the nearest city, a raid calculator (carrying units, travel time, loot per hour), unit speed calibration, and raid notes/statistics.
-5. **📜 Cheat Sheet**: *Dungeons*, *Bosses*, *Recruit %*, *Troops Stats*, and *Layouts* tabs (military city layouts, Land & Sea/Water). Minimum/recommended troops for every dungeon and boss type & level (calculated from the Revival game formulas, including Explored %), raid & boss calculators (losses, loot, kill chance), recruit speed per unit, and the stats of every unit. The community cheat sheet tables (classic LoU) are available as a reference too.
+4. **Dungeons & Bosses**: every dungeon/boss loaded on the Region map is saved automatically (level & explored %); guardians/max loot are filled in when its panel is opened. Includes filters, distance to the nearest city, a raid calculator (carrying units, travel time, loot per hour), and raid notes/statistics. **🎯 Raid Planner**: pick a city and get the nearest dungeons that fit its troops, the number of troops per dungeon (Revival formulas), loot per hour, and how many raids until 100% explored — troops are split automatically.
+5. **📜 Cheat Sheet**: *Dungeons*, *Bosses*, *Recruit %*, *Troops Stats*, and *Layouts* tabs (military city layouts, Land & Sea/Water). Minimum/recommended troops for every dungeon and boss type & level (calculated from the Revival game formulas, including Explored %), raid & boss calculators (losses, loot, kill chance), recruit speed per unit (your city's recruit speed % is filled in automatically from its synced layout), and the stats of every unit. The community cheat sheet tables (classic LoU) are available as a reference too.
 
 ## Preview
 
@@ -52,7 +52,8 @@ The extension only **reads** data that is already on the game page (on-screen te
 
 ## Notes
 - Layouts from a share string carry no levels (assumed level 10); auto-synced layouts use the real levels. Research bonuses are estimated from the city's real production.
-- Unit carry, base speed and power in Settings come from the Revival game data. Real speed can differ because of bonuses/server speed; use the calibration feature on the Dungeon tab.
+- Unit carry, base speed and power in Settings come from the Revival game data. Minutes/field are calibrated automatically from your troop movements (can be turned off in Settings).
+- City data is read language-independently: resources, build queue and troops of all cities come from the game data; production/h and capacity from the resource bar of the active city.
 - If the game's interface changes (updates), the data readers may need adjusting. The logic lives in `content.js`.
 
 ## Credit

@@ -2,6 +2,8 @@
 import { getAll, fullAt, emptyAt, RES, RES_LABEL, uid, trainingTimes, unitName } from './lib/shared.js';
 import { parseShareString, fromGame, isBuilding, N } from './lib/city.js';
 import { initLang, t, locale } from './lib/i18n.js';
+import { updateCalibration, applyFactor } from './lib/speedcal.js';
+import { mergeSettings } from './lib/shared.js';
 
 // A share string copied in the game becomes (or refreshes) that city's "from game" layout.
 // Live sync: the active city's real layout (with levels and build queue) from the game's city view.
@@ -108,7 +110,26 @@ function debounceReschedule() {
 
 chrome.storage.onChanged.addListener((ch, area) => {
   if (area === 'local' && (ch.cities || ch.settings || ch.movements)) debounceReschedule();
+  if (area === 'local' && ch.movements?.newValue) calibrate(ch.movements.newValue).catch(console.warn);
 });
+
+// Auto speed calibration: real minutes/field from the armies currently on the move.
+let calChain = Promise.resolve();
+function calibrate(mv) {
+  calChain = calChain.catch(() => {}).then(async () => {
+    const d = await chrome.storage.local.get(['speedCal', 'settings']);
+    const cal = updateCalibration(d.speedCal, mv.armies);
+    if (!cal) return;
+    const patch = { speedCal: cal };
+    const s = mergeSettings(d.settings);
+    if (s.autoSpeed !== false) {
+      const units = applyFactor(s.units, cal.factor);
+      if (units) patch.settings = { ...(d.settings || {}), units, unitsRev: s.unitsRev };
+    }
+    await chrome.storage.local.set(patch);
+  });
+  return calChain;
+}
 chrome.runtime.onInstalled.addListener(async () => {
   debounceReschedule();
   // After an update the old content script in open game tabs stops working; inject the new one

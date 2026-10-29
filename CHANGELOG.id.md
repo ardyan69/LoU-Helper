@@ -4,6 +4,14 @@
 
 Dibuat oleh **ardhie** (ardhie.andro@gmail.com).
 
+## v1.12.0 — 2026-10-29
+
+- 🎯 Raid Planner di tab Dungeon: pilih kota, extension menyarankan dungeon terdekat yang cocok dengan pasukan di kota itu, jumlah pasukan per dungeon (rumus Revival), loot per jam, dan berapa raid sampai explored 100%.
+- Cheat Sheet → Recruit %: recruit speed % terisi otomatis dari layout kota (bangunan rekrut + Barracks yang menempel, rumus game).
+- Kalibrasi kecepatan otomatis: menit/field tiap unit dihitung dari pergerakan pasukan yang terbaca (bisa dimatikan di Pengaturan).
+- Ringkasan Kota tidak lagi bergantung pada bahasa game; resource & antrian semua kota juga terupdate dari data game tanpa perlu membuka tiap kota.
+- Waktu persiapan/bongkar raid default menjadi 0 (raid di Revival langsung pulang-pergi).
+
 ## v1.11.1 — 2026-10-29
 
 - Pengaturan → Unit memakai data nyata dari game Revival: daya angkut, kecepatan dasar (menit/field), dan kekuatan (serangan ÷ 50); ditambah Sloop, Frigate, War Galleon. Pengaturan lama diperbarui otomatis (kecepatan hasil kalibrasi tetap disimpan).

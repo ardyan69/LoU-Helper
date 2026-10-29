@@ -1,4 +1,4 @@
-import { DEFAULT_UNITS, DEFAULT_SETTINGS, esc } from '../lib/shared.js';
+import { DEFAULT_UNITS, DEFAULT_SETTINGS, esc, fmtAgo } from '../lib/shared.js';
 import { t, LANGS, getLang } from '../lib/i18n.js';
 
 let root, ctx;
@@ -56,6 +56,8 @@ export function render(state) {
       <div class="card">
         <div class="row"><h3 class="grow">${t('Unit')}</h3><button class="btn sm" data-reset="units">${t('Reset ke data game')}</button></div>
         <p>${t('Nilai default diambil dari data game Revival: daya angkut, kecepatan dasar (menit per field), dan kekuatan = serangan ÷ 50 (relatif terhadap 1 Berserker). Kecepatan nyata bisa berbeda karena bonus atau kecepatan server — pakai fitur kalibrasi di tab Dungeon.')}</p>
+        <label class="check"><input type="checkbox" data-k="autoSpeed" ${s.autoSpeed !== false ? 'checked' : ''}> ${t('Kalibrasi menit/field otomatis dari pergerakan pasukan')}</label>
+        <p class="small">${state.speedCal ? t('Terkalibrasi: faktor ×{f} dari {n} pergerakan · {a}', { f: state.speedCal.factor, n: state.speedCal.n, a: fmtAgo(state.speedCal.at) }) : t('Belum ada data: kirim pasukan (raid dll.) saat game terbuka, kalibrasi berjalan sendiri.')}</p>
         <table class="tbl-compact"><thead><tr><th>${t('Unit')}</th><th>${t('Daya angkut')}</th><th>${t('Menit/field')}</th><th>${t('Kekuatan')}</th></tr></thead>
         <tbody>${s.units.map((u, i) => `<tr>
           <td><input type="text" data-u="${i}.name" value="${esc(u.name)}"></td>
@@ -146,5 +148,5 @@ async function importFile(file) {
 
 export function onData(state, keys) {
   // re-render only when settings changed from elsewhere and the user isn't typing here
-  if (keys.includes('settings') && root.classList.contains('on') && !root.contains(document.activeElement)) render(state);
+  if ((keys.includes('settings') || keys.includes('speedCal')) && root.classList.contains('on') && !root.contains(document.activeElement)) render(state);
 }
