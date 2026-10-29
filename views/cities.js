@@ -1,4 +1,4 @@
-import { RES, RES_LABEL, RES_ICON, projected, fullAt, emptyAt, fmtNum, fmtDur, fmtClock, fmtAgo, esc } from '../lib/shared.js';
+import { RES, RES_LABEL, RES_ICON, accountGold, projected, fullAt, emptyAt, fmtNum, fmtDur, fmtClock, fmtAgo, esc } from '../lib/shared.js';
 import { t, locale } from '../lib/i18n.js';
 import * as transfer from './transfer.js';
 
@@ -88,10 +88,11 @@ export function render(state) {
   const totals = { wood: 0, stone: 0, iron: 0, food: 0, gold: 0 };
   let idleQueues = 0, soonFull = 0;
   for (const c of list) {
-    if (c.res) for (const k of Object.keys(totals)) totals[k] += c.res[k]?.rate || 0;
+    if (c.res) for (const k of RES) totals[k] += c.res[k]?.rate || 0;
     if (c.queue && c.queue.count === 0) idleQueues++;
     if (earliestFull(c, pct) - now < 2 * 3.6e6) soonFull++;
   }
+  totals.gold = accountGold(state.cities, now)?.rate || 0; // already the total of all cities
   root.querySelector('#c-summary').innerHTML = `
     <div class="stat"><div class="k">${t('Kota tercatat')}</div><div class="v num">${list.length}</div></div>
     ${['wood', 'stone', 'iron', 'food', 'gold'].map((k) => `
@@ -251,7 +252,7 @@ function tableDetail(list, pct, now) {
       <td class="r num gs"><b>${fmtNum(tot[r].v)}</b></td><td class="r num muted">${fmtNum(tot[r].cap)}</td>
       <td class="r num">${tot[r].cap ? ((tot[r].vx / tot[r].cap) * 100).toFixed(0) + '%' : ''}</td>
       <td class="r num"><b>${tot[r].rate >= 0 ? '+' : ''}${fmtNum(tot[r].rate)}</b></td><td></td>`).join('')}
-      <td class="gs"></td><td></td><td class="gs"></td><td></td><td></td><td></td></tr></tfoot>
+      ${(() => { const g = accountGold(ctx.state.cities, now); return g ? `<td class="r num gs" title="${t('Emas dihitung per akun (sama di semua kota)')}"><b>${fmtNum(g.v)}</b></td><td class="r num"><b>+${fmtNum(g.rate)}</b></td>` : '<td class="gs"></td><td></td>'; })()}<td class="gs"></td><td></td><td></td><td></td></tr></tfoot>
   </table></div>`;
 }
 

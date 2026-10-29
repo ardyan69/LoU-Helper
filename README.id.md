@@ -2,12 +2,12 @@
 
 🇮🇩 Bahasa Indonesia · [English](README.md)
 
-Versi 1.13.0 · dibuat oleh **ardhie** · ardhie.andro@gmail.com
+Versi 1.14.1 · dibuat oleh **ardhie** · ardhie.andro@gmail.com
 
 Alat bantu untuk **Lord of Ultima: Revival** (lordofultima.me):
 
 1. **Ringkasan Kota**: resource, kapasitas, produksi/jam, kapan gudang penuh atau makanan habis, dan status antrian bangunan semua kota. Dilengkapi notifikasi desktop dan rencana **🔁 Transfer** yang menyarankan kiriman resource antar-kota (jumlah, gerobak, waktu tempuh).
-2. **Perencana Layout**: peta 21×21 yang sama dengan game (tembok, menara, jalan, Town Hall, kota air). Produksinya dihitung dengan rumus resmi game. Layout kota yang sedang aktif tersinkron otomatis dari game, lengkap dengan level asli dan antrian bangunan (share string dari City planner juga diterima). Ada **🧠 Rekomendasi** (optimizer yang menyusun bangunan produksi, pengolahan & Cottage di sekitar node alam untuk produksi terbesar: kayu/batu/besi/makanan maksimal, seimbang, atau rasio kustom; opsional boleh menghapus node alam bila tiap node menambah produksi di atas ambang), heatmap "petak terbaik", perbandingan rencana vs kota (apa yang perlu dibangun/dibongkar), level per bangunan, **📋 langkah pembangunan** (apa yang dibongkar/dibangun/di-upgrade, berurutan, dengan biaya & waktu), undo/redo, dan ekspor share string yang bisa langsung di-*Import* di game.
+2. **Perencana Layout**: peta 21×21 yang sama dengan game (tembok, menara, jalan, Town Hall, kota air). Produksinya dihitung dengan rumus resmi game. Layout kota yang sedang aktif tersinkron otomatis dari game, lengkap dengan level asli dan antrian bangunan (share string dari City planner juga diterima). Ada **🧠 Rekomendasi** (optimizer yang menyusun bangunan produksi, pengolahan & Cottage di sekitar node alam untuk produksi terbesar: kayu/batu/besi/makanan maksimal, seimbang, atau rasio kustom; opsional boleh menghapus node alam bila tiap node menambah produksi di atas ambang), heatmap "petak terbaik", perbandingan rencana vs kota (apa yang perlu dibangun/dibongkar), level per bangunan, **📋 langkah pembangunan** (apa yang dibongkar/dibangun/di-upgrade, berurutan, dengan biaya & waktu), **🧩 template** (kota militer dengan recruit speed maksimal untuk satu kelompok unit dan target troop space, hub gudang/dagang, ekonomi), **⚖️ perbandingan berdampingan** dua rencana, undo/redo, dan ekspor share string yang bisa langsung di-*Import* di game.
 3. **Pergerakan**: semua pasukan yang bergerak (raid/return/attack/support…, muatan, hitung mundur), ⚠️ serangan masuk (notifikasi desktop), konvoi dagang/Market (keluar, kembali, kiriman masuk), dan antrian pelatihan pasukan + pasukan di tiap kota.
 4. **Dungeon & Boss**: semua dungeon/boss yang dimuat peta Region tersimpan otomatis (level & explored %); guardians/max loot terisi saat panelnya dibuka. Ada filter, jarak ke kota terdekat, kalkulator raid (unit angkut, waktu tempuh, loot per jam), dan catatan/statistik raid. **🎯 Raid Planner**: pilih kota, lalu dapatkan dungeon terdekat yang cocok dengan pasukannya, jumlah pasukan per dungeon (rumus Revival), loot per jam, dan berapa raid sampai explored 100% — pasukan dibagi otomatis. Daftar dungeon menandai yang sedang diraid, perkiraan explored % terkini, dan skor ⭐ prioritas.
 5. **📈 Statistik**: loot raid per hari & per kota, produksi total, skor, dan pasukan per kota dari waktu ke waktu (dicatat tiap jam).
@@ -53,6 +53,7 @@ Extension ini hanya **membaca** data yang sudah ada di halaman game (teks di lay
 ## Catatan
 - Layout dari share string tidak membawa level (dianggap level 10); layout sinkron otomatis memakai level asli. Bonus riset diperkirakan dari produksi nyata kota.
 - Daya angkut, kecepatan dasar, dan kekuatan unit di Pengaturan diambil dari data game Revival. Menit/field dikalibrasi otomatis dari pergerakan pasukanmu (bisa dimatikan di Pengaturan).
+- Emas di Revival dihitung per akun (setiap kota menampilkan total semua kota), jadi tidak dijumlahkan per kota.
 - Data kota dibaca tanpa bergantung bahasa game: resource, antrian, dan pasukan semua kota dari data game; produksi/jam & kapasitas dari resource bar kota aktif.
 - Kalau tampilan game berubah (update), pembaca data mungkin perlu disesuaikan. Logikanya ada di `content.js`.
 

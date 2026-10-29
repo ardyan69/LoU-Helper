@@ -4,6 +4,16 @@
 
 Dibuat oleh **ardhie** (ardhie.andro@gmail.com).
 
+## v1.14.1 — 2026-10-29
+
+- 🧩 Template militer & hub lebih maksimal: susunan dihitung ulang dengan pencarian yang jauh lebih teliti (recruit % dan kapasitas gudang naik), slot bangunan default 100 (Town Hall L10) — tidak lagi terbatas slot kota saat ini, Barracks ditambah di atas target TS bila menaikkan recruit %, opsi hapus node alam, dan Harbor untuk hub di kota air.
+
+## v1.14.0 — 2026-10-29
+
+- Perbaikan: produksi emas tidak lagi dijumlahkan per kota — di Revival emas sudah total semua kota (akun).
+- 🧩 Perencana Layout → Template: kota militer (recruit speed % maksimal untuk satu kelompok unit dengan target troop space), kota hub (kapasitas gudang & gerobak), dan ekonomi (Rekomendasi) — juga langsung dari Cheat Sheet → Layouts.
+- ⚖️ Perencana Layout → Bandingkan berdampingan: dua rencana dengan peta mini dan tabel selisih (produksi, kapasitas, recruit %, troop space, gerobak).
+
 ## v1.13.0 — 2026-10-29
 
 - 📈 Tab Statistik: grafik loot raid per hari, loot per kota, produksi total, skor, dan pasukan per kota (dicatat otomatis tiap jam).

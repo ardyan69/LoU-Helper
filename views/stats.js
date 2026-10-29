@@ -80,7 +80,7 @@ export function render() {
   const hours = [...buckets.keys()].sort((a, b) => a - b);
   span = hours.length ? hours[hours.length - 1] - hours[0] : 0;
   lineChart(root.querySelector('#ch-prod'), {
-    series: RES5.map((r, i) => ({ name: r === 'gold' ? t('Emas') : RES_LABEL[r], color: RCOL[r], points: hours.map((h) => [h, Object.values(buckets.get(h)).reduce((s, row) => s + (row[3 + i] || 0), 0)]) })),
+    series: RES5.map((r, i) => ({ name: r === 'gold' ? t('Emas') : RES_LABEL[r], color: RCOL[r], points: hours.map((h) => [h, r === 'gold' ? Math.max(0, ...Object.values(buckets.get(h)).map((row) => row[3 + i] || 0)) : Object.values(buckets.get(h)).reduce((s, row) => s + (row[3 + i] || 0), 0)]) })), // gold is account-wide: not summed
     yFmt: fmtNum, xFmt: (x, long) => dfmt(x, long)
   });
   const perCity = (col) => cities.map((c, i) => ({ name: c.name, color: SERIES[i % SERIES.length], points: (hist[c.key] || []).filter((r) => r[0] >= from && r[col] != null).map((r) => [r[0], r[col]]) })).filter((s) => s.points.length);

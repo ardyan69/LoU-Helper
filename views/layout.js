@@ -1,6 +1,7 @@
 import { esc, uid, fmtNum, fmtAgo } from '../lib/shared.js';
 import { openOptimizer } from './optimize-dialog.js';
 import { openBuildSteps } from './buildsteps.js';
+import { openTemplates, openCompare } from './layout-tools.js';
 import { t, locale } from '../lib/i18n.js';
 import { ico, hasIcon, iconCount, ICON_TOTAL, missingIcons } from '../lib/icons.js';
 import {
@@ -83,6 +84,8 @@ export function mount(el, c) {
           <button class="btn sm" id="u-undo" title="Undo (Ctrl+Z)">↶</button>
           <button class="btn sm" id="u-redo" title="Redo (Ctrl+Shift+Z)">↷</button>
           <button class="btn sm primary" id="o-open" title="${t('Hitung penempatan terbaik untuk bangunan produksi, pengolahan & Cottage')}">🧠 ${t('Rekomendasi')}</button>
+          <button class="btn sm" id="t-tpl" title="${t('Template kota ekonomi, militer, atau hub di atas kota ini')}">🧩 ${t('Template')}</button>
+          <button class="btn sm" id="t-side" title="${t('Bandingkan dua rencana berdampingan')}">⚖️ ${t('Bandingkan')}</button>
           <label class="check small"><input type="checkbox" id="t-lv" checked> ${t('Level')}</label>
           <label class="check small"><input type="checkbox" id="t-prod"> ${t('Produksi/jam')}</label>
           <label class="check small" title="${t('Tampilkan petak terbaik untuk bangunan yang sedang dipilih')}"><input type="checkbox" id="t-heat"> 🔥 ${t('Petak terbaik')}</label>
@@ -167,6 +170,8 @@ export function mount(el, c) {
   root.querySelector('#t-cmp').onchange = (e) => { compareId = e.target.value; drawGrid(); drawSide(); };
   root.querySelector('#u-undo').onclick = doUndo;
   root.querySelector('#u-redo').onclick = doRedo;
+  root.querySelector('#t-tpl').onclick = () => openTpl();
+  root.querySelector('#t-side').onclick = () => { if (ctx.state.layouts.length) openCompare(ctx.state.layouts, cur?.id, compareId || undefined); };
   root.querySelector('#o-open').onclick = () => {
     if (!cur) return;
     const city = linkedCity();
@@ -284,6 +289,24 @@ function drawPalette() {
 }
 export function refreshIcons() { if (root) { drawPalette(); drawGrid(); drawSide(); } }
 
+// 🧩 templates on the selected layout (usually the real city)
+function savePlan(next, label, icon) {
+  const base = cur.name.replace(/ — .+$/, '').replace(/^\S+ .*? — /, '');
+  const l = { ...structuredClone(next), id: uid(), name: `${icon} ${label} — ${base}`, source: 'manual', updatedAt: Date.now() };
+  delete l.capturedAt; delete l.live; delete l.queue;
+  ctx.state.layouts.push(l);
+  compareId = cur.id;
+  select(l.id);
+  persist();
+  ctx.toast(t('Template disimpan sebagai rencana baru — hijau = bangun, merah = bongkar'));
+}
+function openTpl(preset) {
+  if (preset?.layoutId && ctx.state.layouts.some((l) => l.id === preset.layoutId)) select(preset.layoutId);
+  if (!cur) { ctx.toast(t('Belum ada rencana.')); return; }
+  const limit = linkedCity()?.buildings?.max || cur.limit || 100;
+  openTemplates(cur, limit, (next, label) => savePlan(next, label, '🧩'), () => root.querySelector('#o-open').click(), preset);
+}
+
 // ---------- state helpers ----------
 function locked() {
   if (cur?.source !== 'game') return false;
@@ -375,6 +398,7 @@ function persist(now) {
 
 // ---------- lifecycle ----------
 export function render(state) {
+  if (window.__louTemplate) { const pre = window.__louTemplate; window.__louTemplate = null; setTimeout(() => openTpl(pre), 50); }
   let migrated = false;
   state.layouts = state.layouts.map((l) => { if (l.v === 2) return l; migrated = true; return migrate(l); });
   if (!state.layouts.length) { state.layouts.push({ ...blank(false), id: uid(), name: t('Rencana') + ' 1', source: 'manual', updatedAt: Date.now() }); migrated = true; }
@@ -566,7 +590,9 @@ function bonusFactors(city) {
   const base = cityStats(live);
   const f = {};
   for (const r of RES) { const real = city.res[r]?.rate, b = base.prod[r]; if (real > 0 && b > 0) f[r] = real / b; }
-  if (city.res.gold?.rate > 0 && base.gold > 0) f.gold = city.res.gold.rate / base.gold;
+  // gold/h is account-wide (all cities together): compare with the townhouses of all synced cities
+  const allGold = ctx.state.layouts.filter((l) => l.source === 'game' && l.live).reduce((a, l) => a + cityStats(l).gold, 0);
+  if (city.res.gold?.rate > 0 && allGold > 0) f.gold = city.res.gold.rate / allGold;
   return Object.keys(f).length ? f : null;
 }
 

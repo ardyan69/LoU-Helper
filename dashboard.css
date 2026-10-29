@@ -372,3 +372,15 @@ header.app #live { margin-left: auto; }
 .bt-wall { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
 .bt-nl { display: flex; align-items: center; gap: 4px; color: var(--muted); }
 .bt-grid .bt-nl input[type=number] { width: 58px; }
+/* ---------- layout templates & side-by-side ---------- */
+dialog.tpldlg { width: min(820px, 96vw); }
+dialog.cmpdlg { width: min(1000px, 96vw); }
+.minimap { display: grid; grid-template-columns: repeat(21, 1fr); gap: 1px; width: 100%; max-width: 420px; aspect-ratio: 1; margin-top: 8px; }
+.minimap i { display: flex; align-items: center; justify-content: center; font-style: normal; font-size: 9px; border-radius: 2px; overflow: hidden; }
+.minimap i.df { outline: 2px solid var(--gold-2); outline-offset: -2px; }
+.cmp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.cmp-grid .field select { width: 100%; }
+@media (max-width: 760px) { .cmp-grid { grid-template-columns: 1fr; } }
+.good-t { color: var(--good); }
+dialog.tpldlg, dialog.cmpdlg { max-height: 92vh; overflow: auto; }
+.tpldlg .minimap { max-width: 320px; }

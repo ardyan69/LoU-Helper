@@ -4,6 +4,16 @@
 
 Made by **ardhie** (ardhie.andro@gmail.com).
 
+## v1.14.1 — 2026-10-29
+
+- 🧩 Better military & hub templates: layouts are searched much more thoroughly (higher recruit % and storage), building slots default to 100 (Town Hall L10) instead of the city's current slots, extra Barracks beyond the TS target when they raise recruit %, an option to remove natural nodes, and Harbors for hubs in water cities.
+
+## v1.14.0 — 2026-10-29
+
+- Fix: gold production is no longer summed per city — in Revival gold is already the total of all cities (account).
+- 🧩 Layout Planner → Templates: military city (max recruit speed % for one unit group with a troop-space target), hub city (storage & carts), and economy (Recommendation) — also straight from Cheat Sheet → Layouts.
+- ⚖️ Layout Planner → Compare side by side: two plans with mini maps and a difference table (production, capacity, recruit %, troop space, carts).
+
 ## v1.13.0 — 2026-10-29
 
 - 📈 Statistics tab: charts of raid loot per day, loot per city, total production, score, and troops per city (recorded automatically every hour).

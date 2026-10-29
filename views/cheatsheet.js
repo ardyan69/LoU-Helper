@@ -65,6 +65,16 @@ export function mount(el, c) {
   const body = root.querySelector('#cs-body');
   body.addEventListener('click', (e) => {
     if (st.part === 'battle' && bt.onClick(e, ctx.state, render)) return;
+    const tb = e.target.closest('[data-tpl],[data-tplunit]');
+    if (tb) {
+      const layoutId = root.querySelector('#lay-city')?.value || undefined;
+      const GROUP_OF = { berserker: 'G', ranger: 'G', guardian: 'G', scout: 'E', crossbowman: 'E', knight: 'E', mage: 'J', warlock: 'J', templar: 'Z', paladin: 'Z', ballista: 'Y', ram: 'Y', catapult: 'Y', war_galleon: 'V', sloop: 'V', frigate: 'V' };
+      window.__louTemplate = tb.dataset.tplunit
+        ? { kind: 'mil', group: GROUP_OF[tb.dataset.tplunit] || 'G', ts: +tb.dataset.tplts || 200000, layoutId }
+        : { kind: tb.dataset.tpl, layoutId };
+      ctx.go('layout');
+      return;
+    }
     const b = e.target.closest('[data-kind],[data-boss],[data-lay]');
     if (!b) return;
     if (b.dataset.kind) st.kind = b.dataset.kind; else if (b.dataset.lay) st.lay = b.dataset.lay; else st.boss = b.dataset.boss;
@@ -414,6 +424,12 @@ function layouts() {
       ${t('Kolom <b>⚙️ Revival</b> = perkiraan di Revival dengan speed % yang sama (waktu dasar unit Revival): waktu per unit · waktu isi penuh TS.')}
       ${t('Kode link ditranskrip dari gambar sheet; jika satu link tidak terbuka, cek huruf yang mirip (l / I / 1, O / 0).')}
     </div>
+    <div class="toolbar card">
+      <span>🧩 ${t('Buat template di Perencana Layout untuk kota')}</span>
+      <select id="lay-city">${(ctx.state.layouts || []).filter((l) => l.source === 'game' && l.live).map((l) => `<option value="${l.id}">${esc(l.cityName || l.name)}</option>`).join('') || '<option value="">—</option>'}</select>
+      <button class="btn sm" data-tpl="mil">⚔️ ${t('Militer')}</button><button class="btn sm" data-tpl="hub">📦 ${t('Hub')}</button><button class="btn sm" data-tpl="eco">🌾 ${t('Ekonomi')}</button>
+      <span class="small muted">${t('atau klik 🧩 di kartu unit untuk template militer dengan TS dari tabel.')}</span>
+    </div>
     <div class="lay-grid">${blocks.map((b) => layoutCard(b, water)).join('')}</div>`;
 }
 function layoutCard(b, water) {
@@ -435,7 +451,7 @@ function layoutCard(b, water) {
       return `<tr><td><b>${esc(lab)}</b></td><td class="num">${esc(ts)}</td><td class="num">${esc(sp)}</td><td class="num">${esc(n)}</td><td>${lnk(max)}</td><td>${lnk(raid)}</td><td class="num">${esc(bk)}</td><td class="num">${esc(time)}</td>${revCell(ids, [T / space(b.unit)], S)}</tr>`; });
   }
   return `<div class="card cs-card lay-card" style="--lay:${layColor(b.unit)}">
-    <div class="tbl-wrap"><table class="cs-tbl cs-lay"><thead><tr><th class="lay-unit">${esc(title)}</th>${head.map((h) => `<th class="${/Layout/.test(h) ? '' : 'num'}">${h}</th>`).join('')}<th class="num" title="${esc(t('Perkiraan di Revival'))}">⚙️ Revival</th></tr></thead>
+    <div class="tbl-wrap"><table class="cs-tbl cs-lay"><thead><tr><th class="lay-unit">${esc(title)} ${b.mix ? '' : `<button class="btn sm" data-tplunit="${b.unit}" data-tplts="${firstNum(b.rows[0][1]) * 1000}" title="${esc(t('Template militer untuk unit ini'))}">🧩</button>`}</th>${head.map((h) => `<th class="${/Layout/.test(h) ? '' : 'num'}">${h}</th>`).join('')}<th class="num" title="${esc(t('Perkiraan di Revival'))}">⚙️ Revival</th></tr></thead>
     <tbody>${body.join('')}</tbody></table></div>
     ${b.mix ? `<p class="small muted">* ${t('untuk rasio 4:1 (catapult:ram).')}</p>` : ''}
   </div>`;
