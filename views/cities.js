@@ -1,6 +1,8 @@
 import { RES, RES_LABEL, RES_ICON, accountGold, projected, fullAt, emptyAt, fmtNum, fmtDur, fmtClock, fmtAgo, esc } from '../lib/shared.js';
 import { t, locale } from '../lib/i18n.js';
 import * as transfer from './transfer.js';
+import { cityFood } from '../lib/food.js';
+import { rpct, researchLevels } from '../lib/research.js';
 
 let root, ctx, sortBy = 'full', sortDir = 1;
 let mode = (() => { try { return localStorage.getItem('lou.cityView') || 'cards'; } catch { return 'cards'; } })();
@@ -21,6 +23,7 @@ export function mount(el, c) {
           <button data-mode="list" title="${t('Satu baris per kota')}">☰ ${t('Tabel list')}</button>
           <button data-mode="detail" title="${t('Stok, kapasitas, %, produksi & waktu penuh per resource')}">▦ ${t('Tabel detail')}</button>
           <button data-mode="transfer" title="${t('Rencana kirim resource antar-kota')}">🔁 ${t('Transfer')}</button>
+          <button data-mode="food" title="${t('Produksi makanan vs makan pasukan per kota')}">🌾 ${t('Makanan pasukan')}</button>
         </div>
       </div>
       <label class="field">${t('Urutkan')}
@@ -114,6 +117,7 @@ export function render(state) {
   root.querySelectorAll('#c-mode [data-mode]').forEach((b) => b.classList.toggle('on', b.dataset.mode === mode));
   const el = root.querySelector('#c-list');
   if (mode === 'transfer') el.innerHTML = transfer.html(state);
+  else if (mode === 'food') el.innerHTML = foodTable(state, list, now);
   else if (mode === 'list') el.innerHTML = tableList(list, pct, now);
   else if (mode === 'detail') el.innerHTML = tableDetail(list, pct, now);
   else el.innerHTML = `<div class="cities">${list.map((c) => card(c, pct, now)).join('')}</div>`;
@@ -314,3 +318,35 @@ function card(c, pct, now) {
 }
 
 export function onData(state) { render(state); }
+
+// ---------- 🌾 army food balance ----------
+const sNum = (n) => (n == null ? '—' : `${n >= 0 ? '+' : ''}${fmtNum(n)}`);
+const netCell = (n, until, now) => {
+  if (n == null) return '<td class="num muted">—</td>';
+  const col = n < 0 ? 'var(--bad)' : 'var(--good)';
+  return `<td class="num"><b style="color:${col}">${sNum(n)}</b>${until ? `<div class="small" style="color:var(--bad)">${t('habis {t}', { t: fmtDur(until - now) })}</div>` : ''}</td>`;
+};
+function foodTable(state, list, now) {
+  const rows = list.map((c) => cityFood(state, c.key, now)).filter(Boolean)
+    .sort((a, b) => (a.netFull ?? a.netAll ?? a.netNow ?? Infinity) - (b.netFull ?? b.netAll ?? b.netNow ?? Infinity));
+  const fr = researchLevels(state) ? rpct(state, 'food') : null;
+  const advice = (f) => {
+    if (f.gross == null) return `<span class="muted">${t('Buka kota ini di game supaya layout & produksinya terbaca.')}</span>`;
+    if (f.netNow < 0) return `<span style="color:var(--bad)">⚠️ ${t('Sekarang minus — kirim makanan atau kirim pasukan raid/support.')}</span>`;
+    if (f.netAll != null && f.netAll < 0) return `<span style="color:var(--warn)">${t('Minus saat semua pasukan pulang ({n}/jam).', { n: sNum(f.netAll) })}</span>`;
+    if (f.netFull != null && f.netFull < 0) return `<span style="color:var(--warn)">${t('Minus kalau TS diisi penuh — butuh {n}/jam lagi (Farm/Mill, riset makanan, atau kiriman).', { n: fmtNum(-f.netFull) })}</span>`;
+    return `<span style="color:var(--good)">✓ ${t('Aman')}</span>`;
+  };
+  return `<div class="card cs-note small">${t('Hanya pasukan yang ada <b>di kota</b> yang makan — pasukan yang sedang raid, menyerang atau support tidak makan sampai pulang. Makanan pasukan dihitung per hari di game (Berserker 6, Knight 25, War Galleon 2.500 …) dan di sini dibagi 24 per jam. Produksi = Farm dari layout game × riset makanan{r}. Kalau makanan habis saat produksi minus, sebagian pasukan kabur.', { r: fr != null ? ` (+${fr}%)` : '' })}</div>
+    <div class="tbl-wrap"><table class="cs-tbl"><thead><tr><th>${t('Kota')}</th><th class="num">${t('Produksi makanan')}</th><th class="num">${t('Makan (di kota)')}</th><th class="num">${t('Bersih sekarang')}</th><th class="num">${t('Stok')}</th><th class="num" title="${t('Pasukan di kota + yang sedang di luar + antrian latihan')}">${t('Semua pulang')}</th><th class="num" title="${t('TS penuh dengan komposisi pasukan sekarang')}">${t('TS penuh')}</th><th>${t('Saran')}</th></tr></thead><tbody>
+    ${rows.map((f) => `<tr>
+      <td><b>${esc(f.name)}</b> <a href="#" class="small muted" data-copy="${f.key}">${f.key}</a></td>
+      <td class="num">${f.gross == null ? '—' : fmtNum(f.gross)}${f.source === 'game' ? ' <span class="small muted" title="' + t('Dari produksi bersih di game + makan pasukan di kota') + '">≈</span>' : ''}</td>
+      <td class="num">${f.eatHome ? '−' + fmtNum(f.eatHome) : '0'}</td>
+      ${netCell(f.netNow, f.emptyAt, now)}
+      <td class="num">${f.stock == null ? '—' : fmtNum(f.stock)}</td>
+      ${netCell(f.netAll, f.emptyAtAll, now)}
+      ${netCell(f.netFull, null, now)}
+      <td class="small">${advice(f)}</td></tr>`).join('')}
+    </tbody></table></div>`;
+}

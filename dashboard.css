@@ -398,3 +398,13 @@ dialog.tpldlg, dialog.cmpdlg { max-height: 92vh; overflow: auto; }
 .cmpcost { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--line); }
 .cmpcost .kv { font-size: 12.5px; }
 .cs-tbl td .sub, .cs-tbl td.sub { padding-left: 14px; color: var(--muted); }
+
+/* 🎯 Operasi */
+.ounits { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+.ounits label { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.ounits input[type=number] { width: 72px; }
+.cs-tbl.ops td { vertical-align: middle; }
+.cs-tbl tr.late td { color: var(--bad); }
+.inc-tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.inc-tabs .inc { background: #ffffff0a; border: 1px solid var(--line); color: var(--text); border-radius: 8px; padding: 6px 10px; cursor: pointer; font: inherit; }
+.inc-tabs .inc.on { border-color: var(--gold); background: #e3b04b1f; }

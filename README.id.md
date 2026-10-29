@@ -2,7 +2,7 @@
 
 🇮🇩 Bahasa Indonesia · [English](README.md)
 
-Versi 1.15.0 · dibuat oleh **ardhie** · ardhie.andro@gmail.com
+Versi 1.16.0 · dibuat oleh **ardhie** · ardhie.andro@gmail.com
 
 Alat bantu untuk **Lord of Ultima: Revival** (lordofultima.me):
 

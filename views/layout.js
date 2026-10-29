@@ -9,6 +9,8 @@ import { ico, hasIcon, iconCount, ICON_TOTAL, missingIcons } from '../lib/icons.
 import { troopSpace, GROUP_CODES } from '../lib/templates.js';
 import { cityRecruitPct, RECRUIT_CODES, RECRUIT_GROUPS, unitById, recruitTime } from '../lib/cheatsheet.js';
 import { BUILDINGS } from '../lib/gamedata.js';
+import { researchLevels, prodFactors, rpct } from '../lib/research.js';
+import { planFood } from '../lib/food.js';
 import {
   N, TOWNHALL, B, zone, isBuilding, isNode, neighbours, blank, migrate, parseShareString, toShareString,
   cityStats, producerOutput, warehouseOutput, townhouseOutput, hideoutOutput, warnings
@@ -609,7 +611,7 @@ function linkedCity() {
 const MIL_CODES = ['B', 'K', 'G', 'E', 'J', 'Z', 'Y', 'V', 'X'];
 const fsec = (x) => (x < 60 ? `${x.toFixed(x < 10 ? 2 : 1)} s` : fmtT(x));
 const fullNum = (x) => Math.round(x).toLocaleString(locale());
-function milResult(p) {
+function milResult(p, foodProd = 0) {
   if (![...p.cells].some((c) => MIL_CODES.includes(c))) return '';
   const lvl = (i) => Math.min(10, Math.max(1, p.levels?.[i] || 10));
   let nBar = 0, castleLvl = 0;
@@ -633,8 +635,18 @@ function milResult(p) {
           const sub = need ? `🔒 ${need}` : u.space > 0 && ts > 0 ? `<span title="${t('Waktu mengisi seluruh TS dengan unit ini')}">${t('isi TS {h}', { h: fmtT((ts / u.space) * sec) })}</span>` : '';
           return `<tr${need ? ' class="muted"' : ''}><td>${esc(u.name)}${sub ? `<div class="small muted">${sub}</div>` : ''}</td><td><b>${fsec(sec)}</b></td></tr>`;
         }).join('')}</table>`).join('')}
-      ${groups.length ? `<div class="small muted" style="margin-top:4px">${t('Waktu rekrut per unit dari bangunan di rencana ini (belum termasuk bonus riset).')}</div>` : ''}
+      ${foodLine(p, foodProd)}
+      ${groups.length ? `<div class="small muted" style="margin-top:4px">${t('Waktu rekrut per unit dari bangunan di rencana ini. Di Revival tidak ada riset kecepatan rekrut; artefak Amulet bisa menyelesaikan rekrutmen lebih cepat.')}</div>` : ''}
     </div>`;
+}
+
+// 🌾 food when the troop space is full of the plan's main unit (only troops at home eat)
+function foodLine(p, foodProd) {
+  const f = planFood(p, foodProd);
+  if (!f) return '';
+  const bad = f.net < 0;
+  return `<div class="kv mil-grp"><span>🌾 ${t('Makanan saat TS penuh')}</span><b class="num" style="color:${bad ? 'var(--bad)' : 'var(--good)'}">${f.net >= 0 ? '+' : ''}${fullNum(f.net)}${t('/jam')}</b></div>
+    <div class="small muted">${t('{n}× {u} makan {e}/jam; produksi makanan rencana {p}/jam.', { n: fullNum(f.ts / f.unit.space), u: esc(f.unit.name), e: fullNum(f.eat), p: fullNum(f.prod) })}${bad ? ' ' + t('Perlu kiriman makanan atau pasukan disimpan di luar kota (raid/support tidak makan).') : ''}</div>`;
 }
 
 // total cost & build time (smart order) from the real city to the plan — computed after a short pause, cached
@@ -670,7 +682,10 @@ function drawSide() {
   if (!cur) { side.innerHTML = `<div class="card">${t('Belum ada rencana.')}</div>`; return; }
   const st = cityStats(cur);
   const city = linkedCity();
-  const fac = bonusFactors(city);
+  // production bonus: the account research read from the game, else estimated from real vs layout production
+  const rl = researchLevels(ctx.state);
+  const fac = rl ? prodFactors(ctx.state) : bonusFactors(city);
+  const conR = rl ? rpct(ctx.state, 'construction') : 0;
   const limit = city?.buildings?.max || cur.limit || 100;
   const i = pinnedIdx >= 0 ? pinnedIdx : hoverIdx;
   const ws = warnings(cur);
@@ -708,16 +723,18 @@ function drawSide() {
     <div class="card">
       <h3>${t('Hasil rencana')}</h3>
       <div class="kv"><span>${t('Bangunan')}</span><b class="num" style="color:${st.buildings > limit ? 'var(--bad)' : 'inherit'}">${st.buildings} / ${limit}</b></div>
-      ${fac ? `<div class="kv small muted"><span></span><span>${t('dasar')} · <span style="color:var(--gold-2)">≈ ${t('dgn bonus kota')}</span></span></div>` : ''}
-      ${RES.map((r) => `<div class="kv"><span>${RES_I[r]} ${RES_N[r]} ${t('/jam')}</span><span class="num"><b>${fmtNum(st.prod[r])}</b>${fac?.[r] ? ` · <span style="color:var(--gold-2)" title="${t('Bonus riset/lainnya kota ini ≈ {p}', { p: pctTxt(fac[r]) })}">${fmtNum(st.prod[r] * fac[r])}</span>` : ''}</span></div>`).join('')}
-      <div class="kv"><span>🪙 ${t('Emas')} ${t('/jam')}</span><span class="num"><b>${fmtNum(st.gold)}</b>${fac?.gold ? ` · <span style="color:var(--gold-2)">${fmtNum(st.gold * fac.gold)}</span>` : ''}</span></div>
+      ${fac ? `<div class="kv small muted"><span></span><span>${t('dasar')} · <span style="color:var(--gold-2)">${rl ? t('dgn riset') : '≈ ' + t('dgn bonus kota')}</span></span></div>` : ''}
+      ${RES.map((r) => `<div class="kv"><span>${RES_I[r]} ${RES_N[r]} ${t('/jam')}</span><span class="num"><b>${fmtNum(st.prod[r])}</b>${fac?.[r] && (!rl || fac[r] !== 1) ? ` · <span style="color:var(--gold-2)" title="${rl ? t('Riset produksi {p}', { p: pctTxt(fac[r]) }) : t('Bonus riset/lainnya kota ini ≈ {p}', { p: pctTxt(fac[r]) })}">${fmtNum(st.prod[r] * fac[r])}</span>` : ''}</span></div>`).join('')}
+      <div class="kv"><span>🪙 ${t('Emas')} ${t('/jam')}</span><span class="num"><b>${fmtNum(st.gold)}</b>${fac?.gold && (!rl || fac.gold !== 1) ? ` · <span style="color:var(--gold-2)">${fmtNum(st.gold * fac.gold)}</span>` : ''}</span></div>
       <div class="kv"><span>📦 ${t('Kapasitas warehouse')}</span><span class="num small">${RES.map((r) => `${RES_I[r]}${fmtNum(st.store[r])}`).join(' ')}</span></div>
       <div class="kv"><span>🕳️ Hideout</span><span class="num">${fmtNum(st.hide)}</span></div>
-      <div class="kv"><span>🏡 ${t('Kecepatan bangun')}</span><span class="num">+${st.speed}%</span></div>
-      ${milResult(cur)}
-      <div class="small muted" style="margin-top:6px">${fac
-        ? `${t('Angka kuning = perkiraan dengan bonus kota {c} (riset dll.), dihitung dari produksi nyata vs layout game-nya:', { c: esc(city.name) })} ${RES.map((r) => fac[r] ? `${RES_I[r]}${pctTxt(fac[r])}` : '').join(' ')}`
-        : t('Angka dasar, belum termasuk bonus riset &amp; artefak. Buka kota terkait di game supaya bonusnya bisa dihitung.')}</div>
+      <div class="kv"><span>🏡 ${t('Kecepatan bangun')}</span><span class="num">+${st.speed}%${conR ? ` · <span style="color:var(--gold-2)" title="${t('Cottage + riset Construction {p}%', { p: conR })}">+${st.speed + conR}%</span>` : ''}</span></div>
+      ${milResult(cur, fac?.food && rl ? st.prod.food * fac.food : st.prod.food)}
+      <div class="small muted" style="margin-top:6px">${rl
+        ? `${t('Angka kuning = dengan riset akunmu (dibaca dari game):')} ${['wood', 'stone', 'iron', 'food', 'gold'].map((r) => `${RES_I[r] || '🪙'}${pctTxt(fac[r])}`).join(' ')} · 🏡+${conR}%`
+        : fac
+          ? `${t('Angka kuning = perkiraan dengan bonus kota {c} (riset dll.), dihitung dari produksi nyata vs layout game-nya:', { c: esc(city.name) })} ${RES.map((r) => fac[r] ? `${RES_I[r]}${pctTxt(fac[r])}` : '').join(' ')}`
+          : t('Angka dasar, belum termasuk bonus riset &amp; artefak. Buka kota terkait di game supaya bonusnya bisa dihitung.')}</div>
       ${city?.res ? `<div class="small muted">${t('Produksi nyata {c} sekarang:', { c: esc(city.name) })} ${RES.map((r) => `${RES_I[r]}${fmtNum(city.res[r]?.rate)}`).join(' ')}</div>` : ''}
     </div>
     ${diff}

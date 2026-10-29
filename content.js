@@ -264,7 +264,7 @@
     for (const c of d.cities) {
       if (c.x == null || c.y == null) continue;
       const key = `${c.x}:${c.y}`;
-      const patch = { key, name: c.name, cont: c.cont, x: c.x, y: c.y, water: c.water, gameId: c.id };
+      const patch = { key, name: c.name, cont: c.cont, x: c.x, y: c.y, water: c.water, castle: !!c.castle, gameId: c.id };
       if (c.res && c.resAt) {
         patch.res = {};
         for (const k of ['wood', 'stone', 'iron', 'food', 'gold']) if (typeof c.res[k] === 'number') patch.res[k] = { v: Math.round(c.res[k]) };

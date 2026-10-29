@@ -29,6 +29,8 @@ export function mount(el, c) {
   root.addEventListener('click', (e) => {
     const cp = e.target.closest('[data-copy]');
     if (cp) { e.preventDefault(); navigator.clipboard.writeText(cp.dataset.copy); ctx.toast(t('Koordinat disalin: {c}', { c: cp.dataset.copy })); }
+    const df = e.target.closest('[data-defend]');
+    if (df) { try { sessionStorage.setItem('lou-ops-inc', df.dataset.defend); } catch {} ctx.go('operasi'); }
   });
 }
 
@@ -122,11 +124,12 @@ function draw(state) {
 
     <div class="card msec ${inc.length ? 'danger' : ''}">
       <h3>⚠️ ${t('Serangan masuk')}</h3>
-      ${inc.length ? `<div class="table-wrap"><table><thead><tr><th>${t('Dari')}</th><th>${t('Penyerang')}</th><th>${t('Ke')}</th><th>${t('Misi')}</th><th>${t('Pasukan')}</th><th>${t('Tiba dalam')}</th><th>${t('Jam')}</th></tr></thead><tbody>
+      ${inc.length ? `<div class="table-wrap"><table><thead><tr><th>${t('Dari')}</th><th>${t('Penyerang')}</th><th>${t('Ke')}</th><th>${t('Misi')}</th><th>${t('Pasukan')}</th><th>${t('Tiba dalam')}</th><th>${t('Jam')}</th><th></th></tr></thead><tbody>
         ${inc.sort((a, b) => (a.arriveAt || 0) - (b.arriveAt || 0)).map((a) => `<tr>
           <td>${place(a.src, a.fromX, a.fromY)}</td><td><b>${esc(a.owner || '?')}</b></td><td>${place(a.target, a.toX, a.toY)}</td>
           <td>${orderLabel(a.order)}</td><td>${a.units ? units(a.units) : `<span class="muted">${t('tidak terlihat')}</span>`}</td>
-          <td class="num" style="color:var(--bad);font-weight:700">${cd(a.arriveAt - now)}</td><td class="small">${clock(a.arriveAt - (mv.serverOffset || 0))}</td></tr>`).join('')}
+          <td class="num" style="color:var(--bad);font-weight:700">${cd(a.arriveAt - now)}</td><td class="small">${clock(a.arriveAt - (mv.serverOffset || 0))}</td>
+          <td><button class="btn sm" data-defend="${esc(String(a.id))}" title="${t('Cari kota yang sempat mengirim bantuan')}">🛡️ ${t('Bantuan')}</button></td></tr>`).join('')}
       </tbody></table></div>` : `<div class="small" style="color:var(--good)">${t('Tidak ada serangan masuk.')} ✓</div>`}
     </div>
 

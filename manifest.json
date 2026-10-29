@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "LoU Revival Helper",
   "short_name": "LoU Helper",
-  "version": "1.15.0",
+  "version": "1.16.0",
   "author": { "email": "ardhie.andro@gmail.com" },
   "description": "Ringkasan kota, perencana layout, pergerakan pasukan & dungeon untuk Lord of Ultima: Revival. Dibuat oleh ardhie. Hanya membaca — tidak mengklik apa pun di game.",
   "minimum_chrome_version": "111",

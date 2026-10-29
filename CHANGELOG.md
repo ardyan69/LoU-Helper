@@ -4,6 +4,13 @@
 
 Made by **ardhie** (ardhie.andro@gmail.com).
 
+## v1.16.0 — 2026-10-29
+
+- 🎯 New Operations tab → Attack planner: pick a target & cities; send times are worked out so everything lands together or in waves (gap in seconds), with checks for other continents/Frigates, Castle, slowest unit, countdowns, and a plan text to copy.
+- 🛡️ Operations → Defense assistant: for each incoming attack, which cities can still send support (units, latest send time, including riding Frigates), a battle estimate with wall/towers/traps & your military research, and the attacker's likely army from their history; a 🛡️ Support button in Movements, plus a simulation mode.
+- 🔬 Account research read from the game: Plan result uses production research (wood/stone/iron/food/gold) and Construction; the Town Hall now counts (+300 wood/h & its storage) and the real Town Hall level is synced (more accurate build steps).
+- 🌾 Army food balance: City Overview → Army food (production vs upkeep of troops in the city, time until empty, when all troops are home & with full TS) and a food-with-full-TS line in Plan result.
+
 ## v1.15.0 — 2026-10-29
 
 - 📋 Smarter build steps: Cottages first when the time saved is larger, the Town Hall only when needed (level & slot requirements), then the step with the largest gain per hour; old buildings are demolished right before their tile is used; times use the construction speed that rises along the way, plus a Gain column and a comparison with the usual order.

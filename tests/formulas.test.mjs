@@ -152,7 +152,9 @@ test('cityStats totals match per-building outputs', () => {
   const W = at(3, 3), S = at(5, 5);
   const p = plan({ [W]: '2', [at(4, 3)]: '.', [S]: 'S', [at(6, 5)]: 'L', [at(9, 9)]: 'C' });
   const st = cityStats(p);
-  assert.equal(st.prod.wood, producerOutput(p, W).total);
-  assert.equal(st.store.wood, warehouseOutput(p, S).out.wood);
+  // Town Hall (level 10 here): +300 wood/h and 175,000 storage per resource, as in the game
+  assert.equal(st.prod.wood, producerOutput(p, W).total + 300);
+  assert.equal(st.store.wood, warehouseOutput(p, S).out.wood + 175000);
+  assert.equal(cityStats({ ...p, levels: p.levels.map((v, i) => (i === TOWNHALL ? 0 : v)) }).prod.wood, producerOutput(p, W).total);
   assert.equal(st.speed, BUILDINGS.cottage.eff[9]);
 });
