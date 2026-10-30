@@ -2,7 +2,7 @@
 
 [English](PRIVACY.md) · 🇮🇩 Bahasa Indonesia
 
-**Berlaku sejak:** 30 Oktober 2026 · untuk versi 1.18.1 dan seterusnya
+**Berlaku sejak:** 31 Oktober 2026 · untuk versi 1.20.1 dan seterusnya
 
 **Pengembang:** ardhie — ardhie.andro@gmail.com
 
@@ -27,7 +27,7 @@ Extension **tidak** membaca atau menyimpan: password atau data login, cookie, to
 Rencana layout, catatan dan tag relasi untuk pemain, catatan raid, rencana serangan/bertahan, draf minister, pengaturan (bahasa, notifikasi, nilai unit) dan isian alat-alat di dashboard.
 
 ### c) Data turunan
-Statistik yang dihitung dari data di atas, misalnya catatan per jam untuk skor, pasukan dan produksi (sampai 60 hari), log loot raid dan kalibrasi kecepatan.
+Statistik yang dihitung dari data di atas, misalnya catatan skor, pasukan dan produksi (per jam selama 7 hari, lalu satu per hari sampai 60 hari), log loot raid dan kalibrasi kecepatan.
 
 ## 2. Cara data digunakan
 Hanya untuk menjalankan fitur yang kamu lihat di extension: ringkasan, perhitungan, rekomendasi, hitung mundur dan notifikasi desktop (misalnya gudang penuh, serangan masuk, atau pelatihan selesai). Data tidak pernah dipakai untuk iklan, profiling, keputusan kredit/pinjaman, atau tujuan lain di luar fitur tersebut.
@@ -50,6 +50,7 @@ Hanya untuk menjalankan fitur yang kamu lihat di extension: ringkasan, perhitung
 |---|---|
 | Akses ke `https://lordofultima.me/*` | Membaca data game di halaman game dan menerapkan setelan minister saat kamu minta. Tidak ada situs lain yang diakses. |
 | `storage` | Menyimpan data di atas secara lokal di browser kamu. |
+| `unlimitedStorage` | Menghapus batas 10 MB browser untuk penyimpanan lokal itu, supaya akun besar (banyak kota, peta luas) tidak berhenti menyimpan data. Tidak ada yang keluar dari browser kamu. |
 | `alarms` | Menjadwalkan pengingat (gudang penuh, pelatihan selesai, konvoi tiba). |
 | `notifications` | Menampilkan pengingat itu sebagai notifikasi desktop (tidak dipakai di Safari). |
 | `scripting` | Memasang ulang extension ke tab game yang sudah terbuka setelah install atau update, supaya game tidak perlu dimuat ulang. |

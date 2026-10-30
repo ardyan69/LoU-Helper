@@ -1,5 +1,6 @@
-import { DEFAULT_UNITS, DEFAULT_SETTINGS, esc, fmtAgo } from '../lib/shared.js';
+import { DEFAULT_UNITS, DEFAULT_SETTINGS, esc, fmtAgo, storageUsage, fmtBytes } from '../lib/shared.js';
 import { t, LANGS, getLang } from '../lib/i18n.js';
+import { applyTheme } from '../lib/theme.js';
 
 let root, ctx;
 
@@ -27,6 +28,9 @@ export function render(state) {
           </label>`).join('')}
         </div>
         <p class="small muted" style="margin-top:8px">${t('Sedang dipakai: {l}', { l: `<b>${esc((LANGS.find(([c]) => c === getLang()) || [])[1] || getLang())}</b>` })}</p>
+        <h3 style="margin-top:14px">🎨 ${t('Tema')}</h3>
+        <div class="seg" id="s-theme">${[['dark', '🌙 ' + t('Gelap')], ['light', '☀️ ' + t('Terang')], ['auto', '🖥️ ' + t('Ikuti sistem')]].map(([k, l]) => `<button type="button" data-theme="${k}" class="${(s.theme || 'dark') === k ? 'on' : ''}">${l}</button>`).join('')}</div>
+        <p class="small muted" style="margin-top:8px">${t('Pintasan: Ctrl+K (atau /) untuk mencari kota, pemain, dungeon & koordinat · Alt+1…0 untuk pindah tab.')}</p>
       </div>
 
       <div class="card">
@@ -74,8 +78,35 @@ export function render(state) {
           <label class="btn">${t('Impor cadangan')}<input type="file" id="s-import" accept="application/json" hidden></label>
           <button class="btn danger" id="s-wipe">${t('Hapus semua data')}</button>
         </div>
+        <h3 style="margin-top:14px">🗄️ ${t('Penyimpanan')}</h3>
+        <p>${t('Riwayat statistik disimpan per jam selama 7 hari, lalu satu titik per hari sampai 60 hari. Kota pemain lain yang tidak terlihat di peta selama 90 hari dilupakan (catatanmu tetap ada).')}</p>
+        <div id="s-storage" class="small muted">…</div>
+        <button class="btn sm" id="s-compact" style="margin-top:8px">${t('Rapikan sekarang')}</button>
       </div>
     </div>`;
+  showStorage();
+}
+
+// friendly names for the biggest storage keys
+const KEY_LABEL = () => ({ history: t('Statistik'), players: t('Pemain'), cities: t('Kota'), movements: t('Pergerakan'), layouts: t('Perencana Layout'), dungeons: 'Dungeon & Boss', gameIcons: t('Ikon game'), attackLog: t('Riwayat serangan'), lootLog: t('Loot raid per hari') });
+let storageBusy = false;
+async function showStorage() {
+  const el = root.querySelector('#s-storage');
+  if (!el || storageBusy) return;
+  storageBusy = true;
+  try {
+    const u = await storageUsage();
+    const pct = u.quota ? Math.min(100, Math.round((u.total / u.quota) * 100)) : null;
+    const color = pct == null ? 'var(--good)' : pct >= 90 ? 'var(--bad)' : pct >= 70 ? 'var(--warn)' : 'var(--good)';
+    const L = KEY_LABEL();
+    el.innerHTML = `
+      <div>${u.quota ? t('Terpakai {a} dari {b} ({p}%)', { a: `<b>${fmtBytes(u.total)}</b>`, b: fmtBytes(u.quota), p: pct }) : t('Terpakai {a} · tanpa batas', { a: `<b>${fmtBytes(u.total)}</b>` })}</div>
+      ${u.quota ? `<div class="bar" style="margin:6px 0"><i style="width:${pct}%;background:${color}"></i></div>` : ''}
+      ${pct != null && pct >= 80 ? `<div style="color:var(--bad);margin:4px 0">⚠️ ${t('Penyimpanan hampir penuh — data baru bisa gagal tersimpan. Klik Rapikan sekarang, atau ekspor cadangan lalu hapus data lama.')}</div>` : ''}
+      <div style="margin-top:4px">${u.keys.slice(0, 6).map(([k, n]) => `${esc(L[k] || k)} <b>${fmtBytes(n)}</b>`).join(' · ')}</div>`;
+  } catch (e) {
+    el.textContent = String(e);
+  } finally { storageBusy = false; }
 }
 
 function setPath(obj, path, val) {
@@ -106,6 +137,13 @@ async function onChange(e) {
 async function onClick(e) {
   const el = e.target;
   const s = structuredClone(ctx.state.settings);
+  if (el.closest('#s-theme [data-theme]')) {
+    s.theme = el.closest('[data-theme]').dataset.theme;
+    await ctx.save({ settings: s });
+    applyTheme(s.theme);
+    render(ctx.state);
+    return;
+  }
   if (el.id === 's-test') {
     chrome.runtime.sendMessage({ type: 'test-notification' });
   } else if (el.dataset.reset) {
@@ -121,6 +159,12 @@ async function onClick(e) {
     a.download = `lou-helper-backup-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  } else if (el.id === 's-compact') {
+    el.disabled = true;
+    try {
+      const r = await chrome.runtime.sendMessage({ type: 'compact-storage' });
+      if (r?.ok) ctx.toast(t('Dirapikan: {a} → {b}', { a: fmtBytes(r.before), b: fmtBytes(r.after) }));
+    } finally { el.disabled = false; showStorage(); }
   } else if (el.id === 's-wipe') {
     if (!confirm(t('Hapus SEMUA data LoU Helper? Ini tidak bisa dibatalkan.'))) return;
     const lang = ctx.state.settings.lang;
@@ -135,7 +179,8 @@ async function importFile(file) {
   try {
     const j = JSON.parse(await file.text());
     const data = j.app === 'lou-helper' ? j.data : j;
-    const allowed = ['cities', 'dungeons', 'raids', 'layouts', 'settings'];
+    // everything the export contains except live game data (it is read again from the game)
+    const allowed = ['cities', 'dungeons', 'raids', 'layouts', 'layoutFocus', 'settings', 'speedCal', 'history', 'lootLog', 'dungeonGains', 'attackLog', 'players', 'playerNotes', 'gameIcons'];
     const clean = Object.fromEntries(Object.entries(data).filter(([k]) => allowed.includes(k)));
     if (!Object.keys(clean).length) throw new Error('empty');
     if (!confirm(t('Impor {k}? Data yang sama akan ditimpa.', { k: Object.keys(clean).join(', ') }))) return;

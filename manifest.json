@@ -1,15 +1,17 @@
 {
   "manifest_version": 3,
-  "name": "LoU Revival Helper",
-  "short_name": "LoU Helper",
-  "version": "1.18.1",
+  "name": "__MSG_appName__",
+  "short_name": "__MSG_appShortName__",
+  "version": "1.24.2",
   "author": {
     "email": "ardhie.andro@gmail.com"
   },
-  "description": "Ringkasan kota, perencana layout, pasukan, dungeon & minister untuk Lord of Ultima: Revival. Dibuat oleh ardhie.",
+  "description": "__MSG_appDesc__",
+  "default_locale": "en",
   "minimum_chrome_version": "111",
   "permissions": [
     "storage",
+    "unlimitedStorage",
     "alarms",
     "notifications",
     "scripting"
@@ -39,6 +41,7 @@
       "js": [
         "lib/compat.js",
         "lib/i18n/content-dict.js",
+        "lib/game-dom.js",
         "content.js"
       ],
       "run_at": "document_idle"
@@ -46,7 +49,7 @@
   ],
   "options_page": "dashboard.html",
   "action": {
-    "default_title": "LoU Helper",
+    "default_title": "__MSG_appShortName__",
     "default_popup": "popup.html",
     "default_icon": {
       "16": "icons/icon16.png",

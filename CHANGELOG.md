@@ -4,6 +4,62 @@
 
 Made by **ardhie** (ardhie.andro@gmail.com).
 
+## v1.24.2 — 2026-10-31
+
+- 🐞 Fix: no more "Extension context invalidated" error on the game page after the extension is updated or reloaded while the game tab is open. The old copy of the script in that tab now stops quietly (all readers, timers and observers switched off) and asks for F5 if no new copy has taken over.
+
+## v1.24.1 — 2026-10-31
+
+- 📐 Layout Planner: a wider page on large screens and a wider Plan result column; warehouse capacity, total resources and remaining resources now show as a tidy row of icons (no more wrapping in the middle of a number), trade carts/ships with their load per trip on a line of their own.
+- 🩺 Diagnostics: every data source that is not OK now has a 👉 hint on what to open in the game so its status fills in, plus an explanation of "Not used yet" / "Attention" / "Problem". The page checks again automatically every 5 seconds while it is open.
+
+## v1.24.0 — 2026-10-31
+
+- ✅ New: To-do tab — one list for all cities, most urgent first: incoming attacks, food running out, full warehouses, empty or almost finished building queues, empty recruitment queues, idle troops, dungeons almost fully explored; every item can be snoozed for 1 or 8 hours, and the number of urgent ones shows in the menu and the popup.
+- 🔎 Incoming attacks with hidden troops: the unit type is guessed from the speed (an army moves as fast as its slowest unit) — in Movements and in the notification. 📈 Players: score, 7-day change, active / inactive status from the scores seen on the map, a score chart, and the "Target: inactive & nearest" sorting.
+- 🗓️ New: Timeline tab — a Gantt chart per city on one time axis: incoming attacks, troops out & back, trade carts/ships (sent, returning, incoming deliveries), construction and recruitment queues; 3–48 hour range. Layout Planner: Plan result shows trade carts (Marketplace) and trade ships (Harbor) with what they carry per trip, and the total resources for all buildings (from an empty city and still needed from the city as it is now); 🧠 Recommendation now has a mini map of the result, and the tiles of every mini map are real squares.
+
+## v1.23.0 — 2026-10-31
+
+- 🐞 City Overview: the stock of cities not open in the game no longer stands still. The game only keeps each city's stock at one moment (possibly hours ago) and adds production/h itself; the extension now does the same — production/h comes from the city's layout when there is no real number from the game yet (marked ≈). Refresh all cities no longer replaces the game's real production/h with an estimate, no longer overwrites data that just came in, and the Update column now shows when the stock was last exact (↗ = projected), not only when it synced.
+- ✨ Interface: grouped menu (City · Military · Intel · Tools), global search Ctrl+K / ⌘K / "/" for cities, players, player cities, dungeons, coordinates, layouts & menu, Alt+1…0 to switch tabs, the server clock in the header, light / dark / follow-system theme (Settings), and a popup with quick links (empty queues, warehouses almost full, defense assistant) — clicking a city in the popup opens it in City Overview, reusing an open dashboard tab.
+
+## v1.22.0 — 2026-10-31
+
+- 🌐 No longer depends on the game language: building & node icons are captured through the game's own icon keys (e.g. building:farm), so they are read in any language; city groups are read from the game state; guardians, max loot & weakness of dungeons/bosses are computed from the game's data tables (the same values the game's panel shows) without opening the panel.
+- 🐞 Fix: the military/hub layout templates no longer fail when the area they use is still completely empty.
+- 🧰 Development: ESLint and type checking (TypeScript through JSDoc) for lib/ & background; a translation tool (rename a text in every language and in the code at once, detect reworded texts, check placeholders & HTML tags, remove unused keys); the version comes from the Change Log; CI & automatic GitHub releases (packages for every browser + release notes); the extension's name & description show in the browser's language (_locales).
+
+## v1.21.0 — 2026-10-31
+
+- 🩺 New: About → Diagnostics — the status of every source of game data (game state, city data, movements, layouts, map, resource bar, Construction panel, city list, dungeon panel, icons, storage, errors) with when it was last read and details; detects when the game state's structure changed after a game update; Copy report & Send to developer buttons. The "data not updating" banner in City Overview now links here.
+- 🌐 More robust against game languages & updates: each city's score and total troops are now read from the game state (before: only from the English city list); the city list and dungeon panels are recognised in any game language (through your own cities' coordinates or dungeons known from the map); numbers with dot, comma or space thousands separators (e.g. French) are read correctly; all game-page selectors & labels are collected in lib/game-dom.js and tested against sample game HTML.
+
+## v1.20.2 — 2026-10-31
+
+- ⚡ Lighter: language dictionaries load on demand (only the active language + English, not all seven), so the popup loads ±160–330 KB of JavaScript instead of ±920 KB and opens about 2× faster; the popup also reads only city, settings & movement data.
+- ⚡ The dashboard updates straight from the data that changed instead of re-reading all data every few seconds (about half the work while the game is open), and tabs that are not open are no longer re-rendered.
+- ⚡ Less work while the game is open: all cities from one game reading are saved in one write (before: one per city — 80 cities: 240 → 2 writes per 20 seconds), and so are all city layouts (80 → 1); the reader in the game page only rebuilds the parts of the game data that changed, reads every 10 seconds while the game tab is hidden, and slows its search down while the game is not loaded; the background only runs speed calibration, the loot log & notification scheduling when the data they use changed.
+
+## v1.20.1 — 2026-10-31
+
+- 🗄️ Safer storage: the unlimitedStorage permission so big accounts don't hit the browser's 10 MB limit; statistics history is condensed (hourly for 7 days, then one point per day up to 60 days — about 6× smaller); other players' cities not seen on the map for 90 days are forgotten (notes are kept). Settings → Storage shows the usage per kind of data and a Tidy up now button. When saving fails, the data reader no longer stops silently: a message appears in the game and the data is retried.
+- ⏰ Notifications use a single alarm (before: one per city × resource, which could exceed the browser's alarm limit on accounts with many cities).
+- 🔔 Grouped notifications: incoming attacks become one notification per target city & attacker, updated with every new wave (number of attacks, mission types, arrival time range in local time, stays until closed); warehouse almost full is one notification per city with all its resources; more than 3 cities at once are summarised in one notification.
+- 💾 Import backup now restores all data (statistics, players & notes, attack history, loot log, icons), not only cities, dungeons, layouts & settings. The README version line and CHANGELOG.md are now generated from the Change Log and checked by the tests.
+
+## v1.20.0 — 2026-10-30
+
+- 🌿 Layout Planner → 🧠 Recommendation: new goal Automatic from natural nodes (auto ratio). The extension works out the maximum potential of wood, stone, iron and food from the city's natural nodes, uses those potentials as the ratio, and finds the layout with the largest total production. The result shows each resource's potential, the ratio used and the share of the potential reached; food can be included or left out.
+
+## v1.19.0 — 2026-10-30
+
+- 💰 Layout Planner → 🧠 Recommendation: new goal Max gold. Townhouses, Marketplaces and (in water cities) Harbors are arranged for the most gold per hour — every bordering L10 Marketplace adds +20% to a Townhouse, a Harbor +50%. It can rearrange the economy buildings, fill empty plots only, or start from scratch, with the option to clear nodes when each node adds enough gold. The result shows gold/h, the average per Townhouse, carts, and the change in resource production.
+
+## v1.18.1 — 2026-10-30
+
+- 📄 Privacy policy for the Chrome Web Store and other browsers: what data is read, where it is stored (only locally in your browser), what is sent (only minister settings to the game, when you click), why each permission is needed, and how to delete your data. Open it from the popup (Privacy) and About → Security & privacy; also available as PRIVACY.md / PRIVACY.id.md.
+
 ## v1.18.0 — 2026-10-30
 
 - 🌐 Now available for Chrome, Edge, Firefox & Safari: one source built per browser with npm run build (Firefox as an .xpi, Safari through the Xcode converter). The popup shows an Allow access button when the browser has not granted access to lordofultima.me yet, notifications are skipped automatically in browsers that do not support them, and the README explains how to install it in each browser.

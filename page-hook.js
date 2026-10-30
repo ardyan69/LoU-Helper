@@ -2,14 +2,31 @@
 //  1. When the game copies a City Planner share string, pass a copy of it to the LoU Helper content script.
 //  2. Every few seconds, read the ACTIVE city (grid with building levels + build queue) that the game's
 //     city view already holds in memory, and pass a snapshot to the content script when it changes.
-// Nothing here sends anything to the game server or changes the game.
+// Nothing here sends anything to the game server or changes the game (exception: 🎩 Ministers → Apply, below).
+//
+// GAME STATE — what this file reads from the game's own state (language-independent). When a game update
+// renames something here, 🩺 Diagnostics (dashboard → About) lists it under "Game state", see checkShape().
+//   store (found through the React tree): armies, incoming, incomingTrades, cities, market.mine, player, world,
+//     map (Map of entities), mapVersion, serverOffset, currentCityId
+//   city: id, name, x, y, continent, water, castle, grid[441] {b, lvl}, buildQueue[] {slot, type, kind, toLevel,
+//     endAt, durationMs}, res {wood…gold}, resAt, units, recruitQueue[] {unit, count, doneCount, perUnitMs, startAt},
+//     wallLevel
+//   army: id, order, trade, tradeLoad, units, carry, fromX/Y, toX/Y, departAt, arriveAt, homeCityId, targetId
+//   map entity: id, kind (city|dungeon|boss), x, y, name, level, dungeon|boss, progress, ownerId, ownerName,
+//     allianceTag, score
+//   player: id, name, lang, research, ministers, ministerUntil, cityNotes[cityId].groups (city groups)
+//   icons: <img> elements whose React props carry the game's icon key k = "building:<code>" (any language)
+// The page's HTML is read by the content script instead: see lib/game-dom.js.
 (() => {
   // versioned guard: a newer hook (after an extension update) may install next to an older one
-  const HOOK_V = 8;
+  const HOOK_V = 11;
   if ((window.__louHelperPageHookV || 0) >= HOOK_V) return;
   window.__louHelperPageHookV = HOOK_V;
   window.__louHelperPageHook = true;
   const post = (msg) => window.postMessage({ __louHelper: msg.kind, ...msg }, location.origin);
+  // 🩺 for the diagnostics page
+  const status = { v: HOOK_V, via: null, lastSnapAt: null, foundAt: null, misses: 0, mutable: false, cities: 0, icons: 0, shape: [], errors: 0, lastError: null };
+  const noteError = (e) => { status.errors++; status.lastError = String((e && e.message) || e).slice(0, 200); };
 
   // ---- 0. the game's own WebSocket (only used for 🎩 Ministers → "Apply to game", on your explicit click) ----
   // Remember the socket the game sends its messages on, so a minister setting can be sent exactly the way the
@@ -73,7 +90,7 @@
     const results = await Promise.all(e.data.msgs.map(sendMinister));
     post({ kind: 'minister-result', id: e.data.id, results });
     // push the fresh settings to the dashboard right away instead of waiting for the next 3-second snapshot
-    setTimeout(() => { try { lastMovSig = ''; snapshot(); } catch (_) { /* ignore */ } }, 150);
+    setTimeout(() => { try { lastMovSig = ''; lastRefs = null; snapshot(); } catch (_) { /* ignore */ } }, 150);
   });
 
   // the content script asks whether a hook is running in the page (else it injects one itself)
@@ -141,9 +158,10 @@
       ? c.buildQueue.map((o) => ({ slot: o.slot, type: o.type, kind: o.kind, toLevel: o.toLevel, endAt: o.endAt || null, durationMs: o.durationMs || 0 }))
       : [];
     const sig = cells + levels.join(',') + JSON.stringify(queue.map((o) => [o.slot, o.toLevel, o.endAt]));
-    if (lastSig[c.id] === sig) return;
+    if (lastSig[c.id] === sig) return false;
     lastSig[c.id] = sig;
     post({ kind: 'city-state', city: { id: c.id, name: c.name, x: c.x, y: c.y, cont: c.continent, water: !!c.water }, cells, levels, queue });
+    return true;
   }
 
   // ---- 3. the game's main store (all cities, armies, trades, recruitment, map) ----
@@ -183,7 +201,46 @@
   const names = new Map(); // entity id -> label info (from the map / own cities)
   const atXY = new Map(); // "x:y" -> same label, to name where an attack comes from
   let lastMapVer = -1, lastMovSig = '', lastCitySig = '';
+  // Cheap change detection: the game replaces a part of its state object when that part changes, so if none of
+  // the parts we read was replaced since the last tick, nothing needs to be rebuilt, compared or sent.
+  // Every FULL_EVERY ms (15 s) everything is checked anyway; if that finds a change although no part was replaced,
+  // the game edits its state in place and the shortcut is switched off for good (`mutable`).
+  const FULL_EVERY = 15000;
+  let lastRefs = null, lastFull = 0, mutable = false;
+  const cityRefs = new Map(); // city id -> [grid, buildQueue] seen at its last check
   const plain = (o) => { try { return JSON.parse(JSON.stringify(o)); } catch (_) { return null; } };
+  // does the game state still look the way this file expects? → list of what is missing (for 🩺 Diagnostics)
+  function checkShape(S) {
+    const bad = [];
+    const need = (ok, what) => { if (!ok) bad.push(what); };
+    for (const k of ['armies', 'incoming', 'cities', 'player']) need(S[k] && typeof S[k] === 'object', `store.${k}`);
+    need(S.map && typeof S.map.values === 'function', 'store.map');
+    need(typeof S.serverOffset === 'number', 'store.serverOffset');
+    const cities = Object.values(S.cities || {});
+    need(cities.length > 0, 'store.cities (empty)');
+    const c = cities[0];
+    if (c) {
+      need(Array.isArray(c.grid) && c.grid.length === 441, 'city.grid[441]');
+      need(Array.isArray(c.grid) && c.grid.some((g) => g && 'b' in g && 'lvl' in g), 'city.grid[].b/lvl');
+      need(c.res && typeof c.res.wood === 'number', 'city.res');
+      need(typeof c.resAt === 'number', 'city.resAt');
+      need(Array.isArray(c.buildQueue), 'city.buildQueue');
+      need(c.recruitQueue == null || Array.isArray(c.recruitQueue), 'city.recruitQueue');
+      need(typeof c.x === 'number' && typeof c.y === 'number', 'city.x/y');
+      need(c.units && typeof c.units === 'object', 'city.units');
+    }
+    const a = Object.values(S.armies || {})[0];
+    if (a) need(a.arriveAt != null && a.order != null, 'army.order/arriveAt');
+    const P = S.player || {};
+    need(typeof P.lang === 'string', 'player.lang');
+    need(P.research && typeof P.research === 'object', 'player.research');
+    if (S.map && typeof S.map.values === 'function') {
+      let ent = 0;
+      for (const e of S.map.values()) { if (ent++ > 50) break; if (e && (e.kind === 'dungeon' || e.kind === 'boss')) { need(typeof e.level === 'number' && (e.dungeon || e.boss), 'map.dungeon.level/type'); break; } }
+    }
+    return bad;
+  }
+
   function snapStore() {
     const S = findStore();
     if (!S) return false;
@@ -193,7 +250,7 @@
       for (const e of S.map.values()) {
         if (!e || !e.id) continue;
         if (e.kind === 'city' || e.kind === 'dungeon' || e.kind === 'boss') {
-          const l = { kind: e.kind, name: e.name || null, x: e.x, y: e.y, level: e.level || null, type: e.dungeon || e.boss || null, owner: e.ownerName || null, tag: e.allianceTag || null };
+          const l = { kind: e.kind, name: e.name || null, x: e.x, y: e.y, level: e.level || null, type: e.dungeon || e.boss || null, owner: e.ownerName || null, tag: e.allianceTag || null, score: e.score ?? null };
           names.set(e.id, l);
           atXY.set(`${e.x}:${e.y}`, l);
         }
@@ -209,6 +266,14 @@
       }
       if (others.length) post({ kind: 'map-cities', cities: others });
     }
+    const now = Date.now();
+    const periodic = mutable || now - lastFull >= FULL_EVERY;
+    const refs = [S.armies, S.incoming, S.incomingTrades, S.cities, S.market, S.player, S.world, S.map, S.mapVersion];
+    const sameRefs = !!lastRefs && refs.every((r, i) => r === lastRefs[i]);
+    if (sameRefs && !periodic) return true;
+    lastRefs = refs;
+    if (periodic) { lastFull = now; status.shape = checkShape(S); }
+    let posted = false;
     const cities = Object.values(S.cities || {});
     for (const c of cities) names.set(c.id, { kind: 'own', name: c.name, x: c.x, y: c.y });
     const label = (id) => (id && names.get(id)) || null;
@@ -232,7 +297,7 @@
     const P = S.player || {};
     const data = { serverOffset: S.serverOffset || 0, lang: P.lang || null, player: P.name || null, research: P.research || null, ministers: P.ministers || null, ministerUntil: P.ministerUntil || null, worldSpeed: (S.world && S.world.speed) || 1, armies, incoming, incomingTrades, training, marketMine };
     const sig = JSON.stringify(data, (key, v) => (key === 'serverOffset' ? undefined : v));
-    if (sig !== lastMovSig) { lastMovSig = sig; post({ kind: 'movements', data }); }
+    if (sig !== lastMovSig) { lastMovSig = sig; post({ kind: 'movements', data }); posted = true; }
     // towers & traps in the wall slots: { ranger_tower: [levels…], pitfall_trap: [...] }
   const WALL_SLOT = /_tower$|_trap$|^barricade$/;
   function wallSlots(c) {
@@ -240,38 +305,104 @@
     for (const g of c.grid || []) if (g && g.b && g.lvl > 0 && WALL_SLOT.test(g.b) && g.b !== 'moonglow_tower') (o[g.b] = o[g.b] || []).push(g.lvl);
     return o;
   }
+  // troops on the move per home city (raids, attacks, supports…), for the city's total
+    const count = (u) => Object.values(u || {}).reduce((t, n) => t + (+n || 0), 0);
+    const troopsOut = new Map();
+    for (const a of Object.values(S.armies || {})) if (a && !a.trade && a.homeCityId) troopsOut.set(a.homeCityId, (troopsOut.get(a.homeCityId) || 0) + count(a.units));
   // language-independent city summary: resources (exact at resAt), build queue, troops at home
     const sum = cities.map((c) => {
       const q = Array.isArray(c.buildQueue) ? c.buildQueue : [];
       const first = q.find((o) => o.endAt) || null;
       let end = first ? first.endAt : null;
       if (end) for (const o of q) if (o !== first && !o.endAt) end += o.durationMs || 0;
+      const me = atXY.get(`${c.x}:${c.y}`);
       return {
         id: c.id, name: c.name, x: c.x, y: c.y, cont: c.continent, water: !!c.water, castle: !!c.castle,
+        score: me && me.score != null ? me.score : null, troopsTotal: (troopsOut.get(c.id) || 0) + count(c.units),
+        groups: P.cityNotes && P.cityNotes[c.id] && Array.isArray(P.cityNotes[c.id].groups) ? P.cityNotes[c.id].groups.map(String) : (P.cityNotes ? [] : null),
         res: c.res ? { wood: c.res.wood, stone: c.res.stone, iron: c.res.iron, food: c.res.food, gold: c.res.gold } : null,
         resAt: c.resAt || null, queue: { count: q.length, nextAt: first ? first.endAt : null, endsAt: end },
         home: c.units || {}, wallLevel: c.wallLevel || 0, towers: wallSlots(c)
       };
     });
-    const cSig = JSON.stringify(sum.map((c) => [c.id, c.name, c.resAt, c.queue, c.home]));
-    if (cSig !== lastCitySig) { lastCitySig = cSig; post({ kind: 'cities-store', serverOffset: S.serverOffset || 0, cities: sum }); }
-    for (const c of cities) postCity(c); // every city's layout, not just the open one
+    const cSig = JSON.stringify([S.currentCityId, sum.map((c) => [c.id, c.name, c.resAt, c.queue, c.home, c.score, c.troopsTotal, c.groups])]);
+    if (cSig !== lastCitySig) { lastCitySig = cSig; post({ kind: 'cities-store', serverOffset: S.serverOffset || 0, currentCityId: S.currentCityId ?? null, cities: sum }); posted = true; }
+    status.cities = cities.length;
+    // every city's layout, not just the open one — rebuilt only for cities whose grid or build queue was replaced
+    for (const c of cities) {
+      const r = cityRefs.get(c.id);
+      const same = !!r && r[0] === c.grid && r[1] === c.buildQueue;
+      if (same && !periodic) continue;
+      cityRefs.set(c.id, [c.grid, c.buildQueue]);
+      if (postCity(c) && same) mutable = true;
+    }
+    if (sameRefs && posted) mutable = true;
     return true;
   }
 
   function snapshot() {
     try {
-      if (snapStore()) return;
+      if (snapStore()) { status.via = 'store'; return found(); }
       const r = findRef();
-      if (r) postCity(r.current.city);
-    } catch (_) { /* never break the game */ }
+      if (r) { postCity(r.current.city); status.via = 'city-view'; return found(); }
+    } catch (e) { noteError(e); /* never break the game */ }
+    status.via = null;
+    return false;
   }
-  setInterval(snapshot, 3000);
+  function found() { status.lastSnapAt = Date.now(); status.foundAt = status.foundAt || status.lastSnapAt; return true; }
+  // ---- 4. building & node icons, by the game's own icon key (language-free) ----
+  // The game draws icons as <img src="data:…"> inside a component with the prop k = "building:farm" (nodes:
+  // "building:forest" …). Only icons not sent yet (or changed) are posted.
+  const iconSent = new Map(); // code -> src length
+  function scanIcons() {
+    const found = {};
+    for (const img of document.querySelectorAll('img')) {
+      const src = img.getAttribute('src') || '';
+      if (!src.startsWith('data:image/')) continue;
+      const fk = Object.keys(img).find((k) => k.startsWith('__reactFiber'));
+      let f = fk ? img[fk] : null;
+      for (let d = 0; f && d < 5; d++, f = f.return) {
+        const k = f.memoizedProps && f.memoizedProps.k;
+        if (typeof k !== 'string') continue;
+        const m = k.match(/^building:([a-z_]+)$/);
+        if (m && CODE[m[1]] && !found[m[1]]) found[m[1]] = src;
+        break; // the nearest icon key decides
+      }
+    }
+    const fresh = Object.entries(found).filter(([c, s]) => iconSent.get(c) !== s.length);
+    for (const [c, s] of fresh) iconSent.set(c, s.length);
+    status.icons = iconSent.size;
+    if (fresh.length) post({ kind: 'icons', icons: Object.fromEntries(fresh) });
+  }
+
+  // Every 3 s while the tab is visible, 10 s while it is in the background (attack warnings keep working;
+  // browsers throttle hidden tabs anyway). While the game is not loaded (login screen…) the search for its
+  // state backs off up to 30 s instead of walking the React tree every 3 s.
+  let misses = 0, loopTimer = null;
+  function loop() {
+    clearTimeout(loopTimer);
+    if ((window.__louHelperPageHookV || 0) > HOOK_V) return; // a newer hook (extension update) took over
+    misses = snapshot() ? 0 : misses + 1;
+    if (!misses && !document.hidden) { try { scanIcons(); } catch (e) { noteError(e); } }
+    status.misses = misses;
+    status.mutable = mutable;
+    const base = document.hidden ? 10000 : 3000;
+    loopTimer = setTimeout(loop, misses ? Math.min(30000, base * 2 ** Math.min(misses, 4)) : base);
+  }
+  loopTimer = setTimeout(loop, 1000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) { misses = 0; clearTimeout(loopTimer); loopTimer = setTimeout(loop, 300); } });
+  // 🩺 Diagnostics (via the content script): report how reading the game goes
+  window.addEventListener('message', (e) => {
+    if (e.source !== window || !e.data || e.data.__louHelperCmd !== 'diag') return;
+    if ((window.__louHelperPageHookV || 0) > HOOK_V) return; // a newer hook answers
+    try { const S = findStore(); if (S) status.shape = checkShape(S); } catch (err) { noteError(err); }
+    post({ kind: 'hook-status', status: { ...status, hidden: document.hidden } });
+  });
   // "Refresh all cities" from the dashboard (via the content script): resend everything now
   window.addEventListener('message', (e) => {
     if (e.source !== window || !e.data || e.data.__louHelperCmd !== 'refresh') return;
     for (const k of Object.keys(lastSig)) delete lastSig[k];
-    lastMapVer = -1; lastMovSig = ''; lastCitySig = '';
+    lastMapVer = -1; lastMovSig = ''; lastCitySig = ''; lastRefs = null; lastFull = 0; cityRefs.clear(); iconSent.clear();
     snapshot();
   });
 })();

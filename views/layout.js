@@ -11,6 +11,8 @@ import { cityRecruitPct, RECRUIT_CODES, RECRUIT_GROUPS, unitById, recruitTime } 
 import { BUILDINGS } from '../lib/gamedata.js';
 import { researchLevels, prodFactors, rpct } from '../lib/research.js';
 import { planFood } from '../lib/food.js';
+import { planCost, tradeInfo, RES5 } from '../lib/plancost.js';
+import { liveLayout } from '../lib/cityrates.js';
 import {
   N, TOWNHALL, B, zone, isBuilding, isNode, neighbours, blank, migrate, parseShareString, toShareString,
   cityStats, producerOutput, warehouseOutput, townhouseOutput, hideoutOutput, warnings
@@ -645,6 +647,36 @@ function linkedCity() {
   return cur?.cityKey ? ctx.state.cities[cur.cityKey] : null;
 }
 
+// 🛒 trade capacity: carts from Marketplaces, ships from Harbors (each with what they carry per trip)
+function tradeLines(p) {
+  const x = tradeInfo(p);
+  const line = (ico, label, n, load) => `<div class="kv"><span>${ico} ${label}</span><b class="num">${fmtNum(n)}</b></div>
+    <div class="kv small muted"><span></span><span>${t('{n} resource sekali kirim', { n: fmtNum(load) })}</span></div>`;
+  return (x.carts ? line('🛒', t('Gerobak dagang'), x.carts, x.cartLoad) : '') + (x.ships ? line('⛵', t('Kapal dagang'), x.ships, x.shipLoad) : '');
+}
+// several resource amounts as an aligned mini grid under the label (no wrapping in the middle of a value)
+function resList(items) {
+  return `<div class="kv-res">${items.filter(([, v]) => v > 0).map(([i, v]) => `<span>${i} ${fmtNum(v)}</span>`).join('') || '<span class="muted">—</span>'}</div>`;
+}
+// 💰 resources to have every building of the plan at its level: from an empty city and from the city as it is now
+const RICON = { wood: '🪵', stone: '🪨', iron: '⛏️', food: '🌾', gold: '🪙' };
+function costLines(p) {
+  const all = planCost(p);
+  if (!all.orders) return '';
+  const fmt = (c) => resList(RES5.map((r) => [RICON[r], c.cost[r]]));
+  const base = p.source !== 'game' && p.cityKey ? liveLayout(ctx.state, p.cityKey) : null;
+  const rem = base ? planCost(p, base) : null;
+  return `<div class="milres">
+      <div class="kv stack"><span>💰 ${t('Total resource semua bangunan')}</span>${fmt(all)}</div>
+      <div class="kv small muted"><span>${t('dari kota kosong')}</span><span>Σ ${fmtNum(all.total)} · ⏱️ ${fmtT(all.time)}</span></div>
+      ${rem ? (rem.orders
+        ? `<div class="kv stack" style="margin-top:6px"><span>🏗️ ${t('Sisa dari kondisi kota sekarang')}</span>${fmt(rem)}</div>
+           <div class="kv small muted"><span>${t('{n} level lagi', { n: fmtNum(rem.orders) })}</span><span>Σ ${fmtNum(rem.total)} · ⏱️ ${fmtT(rem.time)}</span></div>`
+        : `<div class="kv"><span>🏗️ ${t('Sisa dari kondisi kota sekarang')}</span><b style="color:var(--good)">✓ ${t('sudah terpenuhi')}</b></div>`) : ''}
+      <div class="small muted">${t('Waktu dasar tanpa Cottage & riset; membongkar node/bangunan gratis.')}</div>
+    </div>`;
+}
+
 // ⚔️ military part of "Plan result": troop space, recruit speed % per recruitment building group, recruit time per unit
 const MIL_CODES = ['B', 'K', 'G', 'E', 'J', 'Z', 'Y', 'V', 'X'];
 const fsec = (x) => (x < 60 ? `${x.toFixed(x < 10 ? 2 : 1)} s` : fmtT(x));
@@ -764,16 +796,18 @@ function drawSide() {
       ${fac ? `<div class="kv small muted"><span></span><span>${t('dasar')} · <span style="color:var(--gold-2)">${rl ? t('dgn riset') : '≈ ' + t('dgn bonus kota')}</span></span></div>` : ''}
       ${RES.map((r) => `<div class="kv"><span>${RES_I[r]} ${RES_N[r]} ${t('/jam')}</span><span class="num"><b>${fmtNum(st.prod[r])}</b>${fac?.[r] && (!rl || fac[r] !== 1) ? ` · <span style="color:var(--gold-2)" title="${rl ? t('Riset produksi {p}', { p: pctTxt(fac[r]) }) : t('Bonus riset/lainnya kota ini ≈ {p}', { p: pctTxt(fac[r]) })}">${fmtNum(st.prod[r] * fac[r])}</span>` : ''}</span></div>`).join('')}
       <div class="kv"><span>🪙 ${t('Emas')} ${t('/jam')}</span><span class="num"><b>${fmtNum(st.gold)}</b>${fac?.gold && (!rl || fac.gold !== 1) ? ` · <span style="color:var(--gold-2)">${fmtNum(st.gold * fac.gold)}</span>` : ''}</span></div>
-      <div class="kv"><span>📦 ${t('Kapasitas warehouse')}</span><span class="num small">${RES.map((r) => `${RES_I[r]}${fmtNum(st.store[r])}`).join(' ')}</span></div>
+      <div class="kv stack"><span>📦 ${t('Kapasitas warehouse')}</span>${resList(RES.map((r) => [RES_I[r], st.store[r]]))}</div>
       <div class="kv"><span>🕳️ Hideout</span><span class="num">${fmtNum(st.hide)}</span></div>
+      ${tradeLines(cur)}
       <div class="kv"><span>🏡 ${t('Kecepatan bangun')}</span><span class="num">+${st.speed}%${conR ? ` · <span style="color:var(--gold-2)" title="${t('Cottage + riset Construction {p}%', { p: conR })}">+${st.speed + conR}%</span>` : ''}</span></div>
       ${milResult(cur, fac?.food && rl ? st.prod.food * fac.food : st.prod.food)}
+      ${costLines(cur)}
       <div class="small muted" style="margin-top:6px">${rl
-        ? `${t('Angka kuning = dengan riset akunmu (dibaca dari game):')} ${['wood', 'stone', 'iron', 'food', 'gold'].map((r) => `${RES_I[r] || '🪙'}${pctTxt(fac[r])}`).join(' ')} · 🏡+${conR}%`
+        ? `${t('Angka kuning = dengan riset akunmu (dibaca dari game):')} ${['wood', 'stone', 'iron', 'food', 'gold'].map((r) => `<span class="nw">${RES_I[r] || '🪙'}${pctTxt(fac[r])}</span>`).join(' ')} · <span class="nw">🏡+${conR}%</span>`
         : fac
-          ? `${t('Angka kuning = perkiraan dengan bonus kota {c} (riset dll.), dihitung dari produksi nyata vs layout game-nya:', { c: esc(city.name) })} ${RES.map((r) => fac[r] ? `${RES_I[r]}${pctTxt(fac[r])}` : '').join(' ')}`
+          ? `${t('Angka kuning = perkiraan dengan bonus kota {c} (riset dll.), dihitung dari produksi nyata vs layout game-nya:', { c: esc(city.name) })} ${RES.map((r) => fac[r] ? `<span class="nw">${RES_I[r]}${pctTxt(fac[r])}</span>` : '').join(' ')}`
           : t('Angka dasar, belum termasuk bonus riset &amp; artefak. Buka kota terkait di game supaya bonusnya bisa dihitung.')}</div>
-      ${city?.res ? `<div class="small muted">${t('Produksi nyata {c} sekarang:', { c: esc(city.name) })} ${RES.map((r) => `${RES_I[r]}${fmtNum(city.res[r]?.rate)}`).join(' ')}</div>` : ''}
+      ${city?.res ? `<div class="small muted">${t('Produksi nyata {c} sekarang:', { c: esc(city.name) })} ${RES.map((r) => `<span class="nw">${RES_I[r]}${fmtNum(city.res[r]?.rate)}</span>`).join(' ')}</div>` : ''}
     </div>
     ${diff}
     <div class="card">
@@ -788,4 +822,13 @@ function drawSide() {
       <div class="row"><button class="btn sm" id="l-paste">${t('Tempel dari clipboard')}</button><button class="btn sm" id="l-import">${t('Impor sebagai rencana baru')}</button></div>
     </div>`;
   side.querySelectorAll('a[data-cell]').forEach((a) => a.addEventListener('click', (e) => e.preventDefault()));
+}
+
+// "#layout/<id>" (search): open that plan
+export function focus(id) {
+  const l = id && ctx.state.layouts.find((x) => x.id === id);
+  if (!l || painting) return;
+  cur = l; undo = []; redo = [];
+  syncTools();
+  drawAll();
 }

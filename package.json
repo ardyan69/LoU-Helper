@@ -1,16 +1,31 @@
 {
   "name": "lou-revival-helper",
-  "version": "1.18.0",
+  "version": "1.24.2",
   "private": true,
   "description": "LoU Revival Helper — browser extension for Lord of Ultima: Revival (Chrome, Edge, Firefox, Safari).",
   "type": "module",
   "scripts": {
-    "test": "node --test tests/*.test.mjs && node tests/i18n-check.mjs",
-    "build": "node tools/build.mjs",
-    "lint:firefox": "web-ext lint --source-dir dist/firefox"
+    "test": "node --test tests/*.test.mjs && node tests/i18n-check.mjs && node tools/gen-docs.mjs --check",
+    "lint": "eslint .",
+    "typecheck": "tsc -p .",
+    "check": "npm run lint && npm run typecheck && npm test",
+    "docs": "node tools/gen-docs.mjs",
+    "i18n": "node tools/i18n.mjs",
+    "build": "node tools/gen-docs.mjs && node tools/build.mjs",
+    "lint:firefox": "web-ext lint --source-dir dist/firefox",
+    "release:notes": "node tools/release-notes.mjs"
   },
   "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/chrome": "0.3.7",
     "esbuild": "0.25.12",
+    "eslint": "10.14.0",
+    "globals": "17.13.0",
+    "linkedom": "0.18.12",
+    "typescript": "5.9.3",
     "web-ext": "8.10.0"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }

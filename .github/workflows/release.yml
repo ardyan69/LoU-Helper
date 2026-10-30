@@ -1,0 +1,32 @@
+# Release: push a tag "v<version>" (the version of the newest lib/changelog.js entry), e.g.
+#   git tag v1.22.0 && git push origin v1.22.0
+# → all checks, build, and a GitHub release with the Chrome/Edge/Firefox/Safari packages and the notes
+#   from the Change Log.
+name: Release
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Tag must match the version in the Change Log / manifest
+        run: |
+          v=$(node -p "require('./manifest.json').version")
+          test "v$v" = "$GITHUB_REF_NAME" || { echo "::error::tag $GITHUB_REF_NAME but manifest.json is v$v — add the Change Log entry and run npm run docs"; exit 1; }
+      - run: npm run check
+      - run: npm run build
+      - run: npm run lint:firefox
+      - run: node tools/release-notes.mjs "$GITHUB_REF_NAME" > release-notes.md
+      - name: GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" dist/*.zip dist/*.xpi --title "LoU Revival Helper $GITHUB_REF_NAME" --notes-file release-notes.md

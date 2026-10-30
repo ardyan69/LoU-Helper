@@ -3,7 +3,7 @@ import { esc } from '../lib/shared.js';
 import { t, locale } from '../lib/i18n.js';
 import { REV_UNITS, unitById } from '../lib/cheatsheet.js';
 import { battle } from '../lib/battle.js';
-import { WALL, BUILDINGS, TOWERS, TRAPS, ORDERS, researchPct } from '../lib/gamedata.js';
+import { BUILDINGS, TOWERS, TRAPS, ORDERS, researchPct } from '../lib/gamedata.js';
 
 const st = { order: 'assault', att: {}, def: {}, atkBonus: 0, defBonus: 0, wall: 0, morale: 0, tw: {}, tr: {}, extra: 'ranger' };
 try { Object.assign(st, JSON.parse(localStorage.getItem('lou-cs-battle') || '{}')); } catch {}
@@ -15,10 +15,6 @@ export { battle }; // moved to lib/battle.js (shared with the defense assistant)
 
 const ATT_IDS = REV_UNITS.filter((u) => u.spd > 0 || u.id === 'cityguard').map((u) => u.id);
 const DEF_IDS = REV_UNITS.map((u) => u.id);
-function towersOf(state, cityKey) {
-  const c = state.cities[cityKey];
-  return c?.towers || null;
-}
 
 export function html(state) {
   const cities = Object.values(state.cities).filter((c) => c.x != null).sort((a, b) => String(a.name).localeCompare(String(b.name), 'id', { numeric: true }));

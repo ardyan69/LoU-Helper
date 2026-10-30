@@ -179,7 +179,7 @@ function drawResult() {
 }
 
 // ---------- mini map ----------
-function miniMap(p, other) {
+export function miniMap(p, other) {
   let h = '';
   for (let i = 0; i < N * N; i++) {
     const z = zone(i, p.water);

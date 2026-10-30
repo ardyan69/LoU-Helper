@@ -1,8 +1,10 @@
 # LoU Revival Helper (browser extension: Chrome · Edge · Firefox · Safari)
 
+[![XERJ Corpus Hub contributor](https://hub.xerj.org/contributors/ardyan69/badge.svg)](https://hub.xerj.org/contributors/ardyan69)
+
 🇬🇧 English · [Bahasa Indonesia](README.id.md)
 
-Version 1.18.0 · made by **ardhie** · ardhie.andro@gmail.com
+Version 1.24.2 · made by **ardhie** · ardhie.andro@gmail.com
 
 A helper for **Lord of Ultima: Revival** (lordofultima.me):
 
@@ -94,13 +96,18 @@ Desktop notifications (full warehouse, incoming attacks) are not available in Sa
 - **Queue finish times:** open the *Construction* panel once per city.
 - **Dungeons:** on the *Region* tab, click a dungeon or boss icon. A small "Saved" message appears.
 - **City layouts:** synced automatically for all cities at once. They appear in the Layout Planner as "🏰 city name — in-game state" (read-only). Click *Duplicate* to make an editable plan.
+- **Search & shortcuts:** Ctrl+K / ⌘K or `/` searches cities, players, dungeons, coordinates, layouts and the menu; Alt+1…0 switches tabs. Theme (dark / light / follow system): Settings.
+- **City stock:** the game keeps each city's stock at one moment and adds production/h itself; the City Overview does the same. *Update* shows when the stock was last exact (↗ = projected since); ≈ = production/h computed from the city's layout because the city has not been open in the game yet.
+- **To-do & Timeline:** *To-do* lists what needs doing now over all cities (attacks, food, full warehouses, empty queues, idle troops, explored dungeons); 💤 hides an item for 1 or 8 hours. *Timeline* shows incoming attacks, own troops, trade carts/ships, construction and recruitment of every city on one time axis.
+- **Hidden attackers:** when the units of an incoming attack are not visible, Movements and the alert show the likely unit type from the army's speed (minutes per field).
+- **Player activity:** the Players tab keeps each player's total score over time (from the map) and marks players as active or inactive; sort by *Target* to see inactive players nearby first.
 - The dashboard opens from the extension popup, or right-click the icon and choose *Options* (Firefox: *Manage Extension* → *Preferences*).
 
 ## Language
 Settings → 🌐 Language: Bahasa Indonesia, English, Español, Français, Deutsch, Italiano, Magyar, Ελληνικά, or **Follow game language** (uses the language selected in the game). Building names & game terms keep the in-game names.
 
 ## Building icons
-Building icons & names in the Layout Planner are taken from the game when you open the **Build bar**, **Guide → Your city & the grid** (natural nodes), and the **Town Hall** panel. Icons are stored locally in the browser (not bundled with the extension); until they are captured, emoji are used as a fallback.
+Building icons in the Layout Planner are taken from the game whenever it shows them (city view, **Build bar**, **Guide → Your city & the grid** for natural nodes, building panels) — recognised by the game's own icon keys, so in any game language. Icons are stored locally in the browser (not bundled with the extension); until they are captured, emoji are used as a fallback.
 
 ## Safety
 The extension **reads** data that is already on the game page (on-screen text and the game's own city data). It does not click anything and does not automate gameplay. There is one exception, and it only happens when you click it and confirm: **🎩 Set Ministers → Apply to game** sends minister settings (Build, Defense, War, Trade, and switching a minister on or off) with the same commands the game's own Ministers screen uses. Nothing else is ever sent to the game. All data is stored locally in your browser's extension storage (`chrome.storage` / `browser.storage`).
@@ -110,15 +117,22 @@ The extension **reads** data that is already on the game page (on-screen text an
 - Unit carry, base speed and power in Settings come from the Revival game data. Minutes/field are calibrated automatically from your troop movements (can be turned off in Settings).
 - Gold is account-wide in Revival (every city shows the total of all cities), so it is never summed over cities.
 - City data is read language-independently: resources, build queue and troops of all cities come from the game data; production/h and capacity from the resource bar of the active city.
-- If the game's interface changes (updates), the data readers may need adjusting. The logic lives in `content.js`.
+- If the game changes (updates), **ℹ️ About → 🩺 Diagnostics** shows which data source is no longer read (game state, city data, movements, layouts, map, resource bar, panels, icons, storage) and can copy a report for a bug email. The readers live in two places: `page-hook.js` reads the game's state (its *GAME STATE* block lists every field used) and `lib/game-dom.js` reads the page (all selectors, the few English labels and the parsers), tested against sample game HTML in `tests/fixtures/`.
 
 ## Development
-Node 18+. The source folder itself is the Chrome/Edge extension (load it unpacked, no build needed); Firefox and Safari need a small build step.
+Node 20+ (`.nvmrc`). The source folder itself is the Chrome/Edge extension (load it unpacked, no build needed); Firefox and Safari need a small build step.
 
-- `npm install` — once (esbuild for the Firefox/Safari background bundle, web-ext for the Firefox lint).
+- `npm install` — once (esbuild, web-ext, ESLint, TypeScript, linkedom for the tests).
+- `npm run check` — everything CI runs: `npm run lint` (ESLint), `npm run typecheck` (TypeScript checks the JavaScript of `lib/` and `background.js` through JSDoc, nothing is compiled) and `npm test`.
+- `npm test` — tests for the game formulas (production, storage, troop space, recruit %), layout templates, build order, operations & ministers, alerts & history, the game-page readers (against the HTML in `tests/fixtures/`), dungeon/boss data and diagnostics, the translation check, and that every generated file is up to date.
 - `npm run build` — builds `dist/chrome`, `dist/edge`, `dist/firefox` and `dist/safari` plus `dist/lou-helper-<version>-<browser>.zip` (Firefox: `.xpi`). One browser only: `node tools/build.mjs firefox`.
 - `npm run lint:firefox` — checks the Firefox package with Mozilla's linter.
-- `npm test` — tests for the game formulas (production, storage, troop space, recruit %), layout templates, build order, operations & ministers, and the translation check (every UI text must exist in all language files; `node tests/i18n-check.mjs --unused` also lists keys no longer found in the code).
+
+**Translations.** UI texts are written in Indonesian in the code, `t('Teks')`, and that text is the key in every `lib/i18n/<lang>.js`. `npm run i18n -- check` shows missing translations, translations whose `{placeholders}` or `<tags>` differ, and — when a text was reworded in the code — the old key with the exact rename command. `npm run i18n -- rename "<old>" "<new>"` rewords a text in all dictionaries and in the code at once (translations kept); `npm run i18n -- unused` / `prune --yes` lists / removes keys no longer used.
+
+**Generated files** (`npm run docs`, also part of `npm run build`): the version in `manifest.json`, `package.json` and the READMEs comes from the newest entry of `lib/changelog.js`; `CHANGELOG.md`/`CHANGELOG.id.md`, `_locales/<lang>/messages.json` (extension name & store description in the browser's language, from `lib/meta.js`) and `lib/i18n/content-dict.js` are written from the sources. `npm test` fails when one of them is out of date.
+
+**Release.** 1) Add the new version at the top of `lib/changelog.js` (Indonesian text) and its English text in `lib/i18n/en.js` (+ the other languages); 2) `npm run build` and `npm run check`; 3) commit, `git tag v<version>`, `git push --tags`. GitHub Actions (`.github/workflows/release.yml`) checks that the tag matches the version, runs every check, builds all browsers and publishes a GitHub release with the packages and the Change Log text (`npm run release:notes` shows it). Every push/PR runs `ci.yml` (same checks, packages kept as an artifact).
 
 What the build changes per browser: Firefox gets a background *event page* (bundled `background.js`) and a `browser_specific_settings.gecko` id; Safari gets a classic background service worker, no `notifications` permission, and the page hook is injected by `content.js` instead of a `world: "MAIN"` content script. `lib/compat.js` maps `chrome.*` to `browser.*` where needed.
 

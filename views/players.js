@@ -1,9 +1,11 @@
 // "👥 Pemain" — other players seen on the map, your notes/relations, and the history of incoming attacks.
 import { esc, fmtNum, fmtAgo, fmtClock, dist } from '../lib/shared.js';
 import { t } from '../lib/i18n.js';
+import { activity } from '../lib/intel.js';
+import { lineChart, SERIES } from '../lib/chart.js';
 
 let root, ctx, sel = null;
-const f = { q: '', rel: 'all', sort: 'attacks' };
+const f = { q: '', rel: 'all', sort: 'attacks', act: 'all' };
 const REL = { enemy: ['🔴', 'Musuh'], watch: ['🟠', 'Waspadai'], neutral: ['⚪', 'Netral'], ally: ['🟢', 'Sekutu'] };
 
 export function mount(el, c) {
@@ -16,7 +18,8 @@ export function mount(el, c) {
     <div class="toolbar card">
       <label class="field grow">${t('Cari')}<input type="text" id="pl-q" placeholder="${t('nama pemain / aliansi / catatan')}"></label>
       <label class="field">${t('Hubungan')}<select id="pl-rel"><option value="all">${t('Semua')}</option>${Object.entries(REL).map(([k, [i, n]]) => `<option value="${k}">${i} ${t(n)}</option>`).join('')}<option value="attackers">⚔️ ${t('Pernah menyerang')}</option></select></label>
-      <label class="field">${t('Urutkan')}<select id="pl-sort"><option value="attacks">${t('Serangan terbanyak')}</option><option value="near">${t('Terdekat')}</option><option value="cities">${t('Kota terbanyak')}</option><option value="name">${t('Nama')}</option></select></label>
+      <label class="field">${t('Aktivitas')}<select id="pl-act"><option value="all">${t('Semua')}</option><option value="active">🟢 ${t('Aktif')}</option><option value="inactive">🔴 ${t('Tidak aktif')}</option><option value="unknown">⚪ ${t('Belum diketahui')}</option></select></label>
+      <label class="field">${t('Urutkan')}<select id="pl-sort"><option value="attacks">${t('Serangan terbanyak')}</option><option value="near">${t('Terdekat')}</option><option value="cities">${t('Kota terbanyak')}</option><option value="score">${t('Skor tertinggi')}</option><option value="growth">${t('Tumbuh paling cepat (7 hari)')}</option><option value="target">🎯 ${t('Target: tidak aktif & terdekat')}</option><option value="name">${t('Nama')}</option></select></label>
     </div>
     <div class="two-col">
       <div class="table-wrap" id="pl-table"></div>
@@ -25,6 +28,7 @@ export function mount(el, c) {
   root.querySelector('#pl-q').addEventListener('input', (e) => { f.q = e.target.value.toLowerCase(); render(); });
   root.querySelector('#pl-rel').addEventListener('change', (e) => { f.rel = e.target.value; render(); });
   root.querySelector('#pl-sort').addEventListener('change', (e) => { f.sort = e.target.value; render(); });
+  root.querySelector('#pl-act').addEventListener('change', (e) => { f.act = e.target.value; render(); });
   root.querySelector('#pl-table').addEventListener('click', (e) => {
     const tr = e.target.closest('tr[data-name]');
     if (tr) { sel = tr.dataset.name; render(); }
@@ -59,7 +63,9 @@ function model() {
     for (const c of cs) for (const m of mine) { const d = dist(c, m); if (!near || d < near.d) near = { d, mine: m, theirs: c }; }
     const n = S.playerNotes?.[name] || {};
     const list = (att[name] || []).sort((a, b) => (b.arriveAt || b.seenAt) - (a.arriveAt || a.seenAt));
-    return { name, tag: p.tag || list[0]?.tag || null, cities: cs, near, attacks: list, rel: n.rel || '', note: n.note || '', seenAt: p.seenAt };
+    const act = activity(S.playerHistory?.[name], Date.now());
+    const score = cs.some((c) => typeof c.score === 'number') ? cs.reduce((s, c) => s + (c.score || 0), 0) : null;
+    return { name, tag: p.tag || list[0]?.tag || null, cities: cs, near, attacks: list, rel: n.rel || '', note: n.note || '', seenAt: p.seenAt, act, score, hist: S.playerHistory?.[name] || [] };
   });
 }
 
@@ -72,13 +78,18 @@ function renderTable() {
   if (f.q) rows = rows.filter((r) => `${r.name} ${r.tag || ''} ${r.note}`.toLowerCase().includes(f.q));
   if (f.rel === 'attackers') rows = rows.filter((r) => r.attacks.length);
   else if (f.rel !== 'all') rows = rows.filter((r) => r.rel === f.rel);
-  const by = { attacks: (a, b) => b.attacks.length - a.attacks.length || (a.near?.d ?? 1e9) - (b.near?.d ?? 1e9), near: (a, b) => (a.near?.d ?? 1e9) - (b.near?.d ?? 1e9), cities: (a, b) => b.cities.length - a.cities.length, name: (a, b) => a.name.localeCompare(b.name) };
+  if (f.act !== 'all') rows = rows.filter((r) => r.act.status === f.act);
+  const actRank = { inactive: 0, unknown: 1, active: 2 };
+  const by = { score: (a, b) => (b.score ?? -1) - (a.score ?? -1), growth: (a, b) => (b.act.delta7 ?? -Infinity) - (a.act.delta7 ?? -Infinity),
+    target: (a, b) => actRank[a.act.status] - actRank[b.act.status] || (a.near?.d ?? 1e9) - (b.near?.d ?? 1e9), attacks: (a, b) => b.attacks.length - a.attacks.length || (a.near?.d ?? 1e9) - (b.near?.d ?? 1e9), near: (a, b) => (a.near?.d ?? 1e9) - (b.near?.d ?? 1e9), cities: (a, b) => b.cities.length - a.cities.length, name: (a, b) => a.name.localeCompare(b.name) };
   rows.sort(by[f.sort]);
   const tbl = root.querySelector('#pl-table');
-  tbl.innerHTML = rows.length ? `<table class="cs-tbl"><thead><tr><th>${t('Pemain')}</th><th>${t('Aliansi')}</th><th class="num">${t('Kota')}</th><th class="num">${t('Jarak terdekat')}</th><th class="num">⚔️ ${t('Serangan')}</th><th>${t('Terakhir')}</th><th>${t('Catatan')}</th></tr></thead><tbody>
+  tbl.innerHTML = rows.length ? `<table class="cs-tbl"><thead><tr><th>${t('Pemain')}</th><th>${t('Aliansi')}</th><th class="num">${t('Kota')}</th><th class="num">★ ${t('Skor')}</th><th class="num">${t('7 hari')}</th><th>${t('Aktivitas')}</th><th class="num">${t('Jarak terdekat')}</th><th class="num">⚔️ ${t('Serangan')}</th><th>${t('Terakhir')}</th><th>${t('Catatan')}</th></tr></thead><tbody>
     ${rows.map((r) => `<tr data-name="${esc(r.name)}" class="${r.name === sel ? 'sel' : ''}" style="cursor:pointer">
       <td>${r.rel ? REL[r.rel][0] + ' ' : ''}<b>${esc(r.name)}</b></td><td>${r.tag ? `<span class="pill">${esc(r.tag)}</span>` : '<span class="muted">—</span>'}</td>
-      <td class="num">${r.cities.length || '—'}</td><td class="num">${r.near ? r.near.d.toFixed(1) : '—'}</td>
+      <td class="num">${r.cities.length || '—'}</td><td class="num">${r.score != null ? fmtNum(r.score) : '—'}</td>
+      <td class="num" style="color:${r.act.delta7 > 0 ? 'var(--good)' : r.act.delta7 < 0 ? 'var(--bad)' : 'inherit'}">${r.act.delta7 != null ? `${r.act.delta7 > 0 ? '+' : ''}${fmtNum(r.act.delta7)}` : '—'}</td>
+      <td>${actPill(r.act)}</td><td class="num">${r.near ? r.near.d.toFixed(1) : '—'}</td>
       <td class="num ${r.attacks.length ? 'bad-t' : ''}">${r.attacks.length || '—'}</td>
       <td class="small muted">${r.attacks[0] ? fmtAgo(r.attacks[0].arriveAt || r.attacks[0].seenAt) : '—'}</td>
       <td class="small">${esc(r.note.slice(0, 40))}</td></tr>`).join('')}</tbody></table>`
@@ -94,15 +105,37 @@ function renderSide(r) {
       <label class="field">${t('Hubungan')}<select data-pn="rel"><option value="">—</option>${Object.entries(REL).map(([k, [i, n]]) => `<option value="${k}" ${r.rel === k ? 'selected' : ''}>${i} ${t(n)}</option>`).join('')}</select></label>
       <label class="field" style="margin-top:8px">${t('Catatan')}<textarea data-pn="note" rows="3" placeholder="${t('mis. aktif malam, punya banyak Knight…')}">${esc(r.note)}</textarea></label>
     </div>
+    <div class="card"><h3>📈 ${t('Aktivitas')} ${actPill(r.act)}</h3>
+      <div class="kv"><span>★ ${t('Skor')}</span><b class="num">${r.score != null ? fmtNum(r.score) : '—'}</b></div>
+      <div class="kv"><span>${t('Perubahan 7 hari')}</span><span class="num">${r.act.delta7 != null ? `${r.act.delta7 > 0 ? '+' : ''}${fmtNum(r.act.delta7)}${r.act.perDay != null ? ` · ${r.act.perDay > 0 ? '+' : ''}${fmtNum(r.act.perDay)}/${t('hari')}` : ''}` : '—'}</span></div>
+      <div class="kv"><span>${t('Skor terakhir berubah')}</span><span>${r.act.lastChange ? fmtAgo(r.act.lastChange) : '—'}</span></div>
+      <div id="pl-chart" style="margin-top:6px"></div>
+      <p class="small muted">${t('Dihitung dari skor kota-kotanya setiap kali terlihat di peta Region. "Tidak aktif" = skor tidak berubah walau teramati ≥ 3 hari.')}</p>
+    </div>
     <div class="card"><h3>🏰 ${t('Kota')} (${r.cities.length})</h3>
       ${r.cities.length ? `<table class="cs-tbl"><tbody>${r.cities.sort((a, b) => (b.score || 0) - (a.score || 0)).map((c) => `<tr><td>${esc(c.name || '—')}${c.castle ? ' 🏯' : ''}${c.water ? ' 🌊' : ''}</td><td><a href="#" class="small muted" data-copy="${c.key}">${c.key}</a></td><td class="num small">${c.score != null ? fmtNum(c.score) : ''}</td></tr>`).join('')}</tbody></table>
         ${r.near ? `<p class="small muted">${t('Terdekat: {a} ↔ {b} ({d} field)', { a: esc(r.near.theirs.name || r.near.theirs.key), b: esc(r.near.mine.name), d: r.near.d.toFixed(1) })}</p>` : ''}` : `<p class="small muted">${t('Belum terlihat di peta.')}</p>`}
     </div>
     <div class="card"><h3>⚔️ ${t('Riwayat serangan masuk')} (${r.attacks.length})</h3>
       ${r.attacks.length ? `<table class="cs-tbl"><thead><tr><th>${t('Waktu')}</th><th>${t('Misi')}</th><th>${t('Dari')}</th><th>${t('Ke')}</th></tr></thead><tbody>${r.attacks.slice(0, 50).map((a) => `<tr><td class="small">${fmtClock(a.arriveAt || a.seenAt)}</td><td>${esc(a.order || '?')}</td><td class="small">${esc(a.src || `${a.fromX}:${a.fromY}`)}</td><td class="small">${esc(a.target || `${a.toX}:${a.toY}`)}</td></tr>`).join('')}</tbody></table>` : `<p class="small muted">${t('Tidak ada serangan tercatat dari pemain ini.')}</p>`}
-    </div>`;
+    </div>`;  const ch = side.querySelector('#pl-chart');
+  if (ch && r.hist.length > 1) lineChart(ch, { series: [{ name: t('Skor'), color: SERIES[3], points: r.hist.map((p) => [p[0], p[1]]) }], yFmt: fmtNum, xFmt: (x) => new Date(x).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) });
+}
+
+function actPill(a) {
+  const L = { active: t('Aktif'), inactive: t('Tidak aktif'), unknown: t('Belum diketahui') };
+  return `<span class="act ${a.status}" title="${esc(t('Aktivitas dari perubahan skor yang teramati'))}"><i></i>${L[a.status]}</span>`;
 }
 
 export function onData(state, keys) {
-  if (root?.classList.contains('on') && keys.some((k) => ['players', 'attackLog', 'cities'].includes(k)) && !root.contains(document.activeElement)) render();
+  if (root?.classList.contains('on') && keys.some((k) => ['players', 'attackLog', 'cities', 'playerHistory'].includes(k)) && !root.contains(document.activeElement)) render();
+}
+
+// "#pemain/<name>" (search): select that player
+export function focus(name) {
+  if (!name) return;
+  sel = name; f.q = '';
+  const q = root.querySelector('#pl-q'); if (q) q.value = '';
+  render();
+  root.querySelector('tr.sel')?.scrollIntoView({ block: 'center' });
 }

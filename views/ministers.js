@@ -222,7 +222,7 @@ function applyLocal(msgs, results) {
 }
 async function apply(key) {
   const cities = ministerCities(st());
-  let msgs = [], lines = [];
+  let msgs, lines = [];
   if (key === 'trade') {
     if (!tradeChanged()) return;
     const edits = {};

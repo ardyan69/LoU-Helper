@@ -6,7 +6,9 @@
   if (window.__louHelperLoaded) return;
   window.__louHelperLoaded = true;
 
-  const RES_MAP = { wood: 'wood', stone: 'stone', iron: 'iron', food: 'food', gold: 'gold' };
+  // selectors, labels & parsers for the game's page: lib/game-dom.js (loaded before this file)
+  const D = window.LOU_DOM;
+  if (!D) { console.warn('[LoU Helper] lib/game-dom.js missing'); return; }
   // UI language for the small in-game messages (dictionary from lib/i18n/content-dict.js)
   let uiLang = 'id', langSetting = 'id', gameLangSeen = null;
   const LANG_OK = ['id', 'en', 'es', 'fr', 'de', 'it', 'hu', 'el'];
@@ -25,62 +27,65 @@
   }
   let capture = { cities: true, dungeons: true };
   let alive = true;
+  let pollTimer = null, observer = null;
   const lastWrite = {}; // key -> {sig, at}
 
-  // ---------- parsers ----------
-  function parseNum(s) {
-    if (s == null) return null;
-    s = String(s).trim().toLowerCase().replace(/\s/g, '').replace(/,/g, '');
-    const m = s.match(/^(-?[\d.]+)([km])?$/);
-    if (!m) return null;
-    let n = m[1];
-    if (!m[2] && /^-?\d{1,3}(\.\d{3})+$/.test(n)) n = n.replace(/\./g, ''); // "7.000" -> 7000
-    let v = parseFloat(n);
-    if (m[2] === 'k') v *= 1e3;
-    if (m[2] === 'm') v *= 1e6;
-    return Math.round(v);
+  // ---------- 🩺 diagnostics: what was read from where, and when (shown in the dashboard → About → Diagnostics) ----------
+  const diag = { startedAt: Date.now(), msgs: {}, readers: {}, storage: {} };
+  function seen(name, ok, note) {
+    const r = diag.readers[name] || (diag.readers[name] = {});
+    if (ok) { r.okAt = Date.now(); r.note = note || null; } else { r.failAt = Date.now(); if (note) r.note = note; }
   }
-  function parseDur(s) {
-    if (!s) return null;
-    let ms = 0, hit = false;
-    const re = /(\d+)\s*(d|h|j|m|s)\b/gi;
-    let m;
-    while ((m = re.exec(s))) {
-      hit = true;
-      const n = +m[1], u = m[2].toLowerCase();
-      ms += n * (u === 'd' ? 864e5 : u === 'h' || u === 'j' ? 36e5 : u === 'm' ? 6e4 : 1e3);
-    }
-    return hit ? ms : null;
-  }
-  function parseCoord(s) {
-    const m = String(s || '').match(/C(\d+)\s*·\s*(\d+):(\d+)/);
-    return m ? { cont: +m[1], x: +m[2], y: +m[3], key: `${m[2]}:${m[3]}` } : null;
-  }
-  const aria = (el) => (el && el.getAttribute('aria-label')) || '';
+  const ownKeys = new Set(); // "x:y" of the player's cities (from the game state)
+  const ownById = new Map(); // game city id -> { key, name, cont }
+  let currentId = null; // the city open in the game (from the game state)
+  let groupsFromState = false; // city groups come from the game state (else from the "Your cities" list)
+  const knownDungeons = new Map(); // "x:y" -> { kind, type, level, explored } from the map
 
   // ---------- storage ----------
+  const VOLATILE = new Set(['seenAt', 'v', 'at', 'endsAt', 'nextAt', 'measuredAt', 'syncedAt', 'storeAt', 'rateAt']);
   function update(field, key, patch, force) {
     if (!alive) return Promise.resolve();
-    const VOLATILE = new Set(['seenAt', 'v', 'at', 'endsAt', 'nextAt', 'measuredAt', 'syncedAt', 'storeAt']);
     const sig = JSON.stringify(patch, (k, v) => (VOLATILE.has(k) ? undefined : v));
     const lw = lastWrite[field + key];
     const now = Date.now();
     // values tick every second; write at most every 20 s (5 s when forced) unless something structural changed
     if (lw && lw.sig === sig && now - lw.at < (force ? 5000 : 20000)) return Promise.resolve();
     lastWrite[field + key] = { sig, at: now };
-    // serialize read-modify-write so parallel updates don't overwrite each other
+    // Batched: all updates made within 50 ms (e.g. every city of one game snapshot) are written with ONE
+    // read-modify-write per field, instead of one full read + write of `cities` per city.
+    const pf = pendingWrites[field] || (pendingWrites[field] = {});
+    pf[key] = pf[key] ? deepMerge(pf[key], patch) : patch;
+    return new Promise((resolve) => {
+      flushWaiters.push(resolve);
+      if (!flushTimer) flushTimer = setTimeout(flushWrites, 50);
+    });
+  }
+  let pendingWrites = {}, flushWaiters = [], flushTimer = null;
+  function flushWrites() {
+    flushTimer = null;
+    const batch = pendingWrites, waiters = flushWaiters;
+    pendingWrites = {};
+    flushWaiters = [];
+    // serialized with the other read-modify-writes so parallel updates don't overwrite each other
     writeChain = writeChain.then(async () => {
       if (!alive) return;
+      const fields = Object.keys(batch);
       try {
-        const d = await chrome.storage.local.get(field);
-        const all = d[field] || {};
-        all[key] = deepMerge(all[key] || {}, patch);
-        await chrome.storage.local.set({ [field]: all });
+        const d = await chrome.storage.local.get(fields);
+        const out = {};
+        for (const field of fields) {
+          const all = d[field] || {};
+          for (const [key, patch] of Object.entries(batch[field])) all[key] = deepMerge(all[key] || {}, patch);
+          out[field] = all;
+        }
+        await chrome.storage.local.set(out);
+        diag.storage.okAt = Date.now();
       } catch (e) {
+        for (const field of fields) for (const key of Object.keys(batch[field])) delete lastWrite[field + key]; // not saved: retry with the next reading
         stop(e);
       }
-    });
-    return writeChain;
+    }).finally(() => waiters.forEach((r) => r()));
   }
   let writeChain = Promise.resolve();
   function deepMerge(a, b) {
@@ -90,123 +95,110 @@
     }
     return out;
   }
+  // The extension was reloaded/updated: this old copy of the script lost its connection to the extension.
+  const contextGone = (e) => /context invalidated/i.test(String(e && (e.message || e))) || !(chrome.runtime && chrome.runtime.id);
+  // true while this copy can still use chrome.*; switches the script off (quietly) as soon as it cannot.
+  // chrome.storage / chrome.runtime calls THROW synchronously in an orphaned script ("Extension context
+  // invalidated"), so every entry point checks this first instead of relying on .catch().
+  function ctxOk() {
+    if (!alive) return false;
+    if (chrome.runtime && chrome.runtime.id) return true;
+    stop();
+    return false;
+  }
   function stop(e) {
-    // Happens after the extension is reloaded/updated: this old script loses its context.
     if (!alive) return;
+    // Any other error (e.g. the extension storage is full) must not switch the reader off for good:
+    // report it and keep going, so data flows again as soon as the problem is gone.
+    if (e && !contextGone(e)) { storageProblem(e); return; }
     alive = false;
-    observer && observer.disconnect();
-    if (e && !/context invalidated/i.test(String(e))) { console.warn('[LoU Helper]', e); return; }
+    try {
+      if (observer) observer.disconnect();
+      clearInterval(pollTimer);
+      clearTimeout(flushTimer);
+      clearTimeout(movTimer);
+    } catch (_) { /* called before the timers exist */ }
     // The background normally injects a fresh copy right away; if none took over, ask for a refresh.
     setTimeout(() => {
       if (document.documentElement.dataset.louHelper === INSTANCE) toast(tr('Extension diperbarui — tekan F5 agar data kota terus terupdate'), 8000);
     }, 4000);
   }
+  let lastProblemToast = 0;
+  function storageProblem(e) {
+    console.warn('[LoU Helper]', e);
+    diag.storage.err = String(e && (e.message || e)).slice(0, 200);
+    diag.storage.errAt = Date.now();
+    const now = Date.now();
+    if (now - lastProblemToast < 10 * 60000) return; // at most one message every 10 minutes
+    lastProblemToast = now;
+    const full = /quota|QUOTA_BYTES|storage.*full/i.test(String(e && (e.message || e)));
+    toast(full ? tr('Penyimpanan extension penuh — data baru tidak tersimpan. Buka LoU Helper → Pengaturan → Penyimpanan.')
+      : tr('LoU Helper gagal menyimpan data: {e}', { e: String(e && (e.message || e)).slice(0, 120) }), 9000);
+  }
   const INSTANCE = String(Date.now()) + Math.random().toString(36).slice(2, 6);
   document.documentElement.dataset.louHelper = INSTANCE;
 
-  // ---------- scrapers ----------
+  // ---------- page readers (the parsing itself lives in lib/game-dom.js) ----------
+  // the open city: from the page's city chip, else from the game state
+  function currentCity() {
+    const c = D.readActiveCity(document);
+    if (c) return c;
+    const o = currentId && ownById.get(currentId);
+    return o ? { ...o, fromState: true } : null;
+  }
+
+  // resource bar of the open city: capacity and production/h exist only on the page
   function scrapeActiveCity() {
-    const chip = document.querySelector('button.city-chip');
-    if (!chip) return;
-    const c = parseCoord(chip.querySelector('.sub')?.textContent);
+    const c = D.readActiveCity(document);
+    seen('cityChip', !!c);
     if (!c) return;
-    const name = chip.querySelector('.name')?.textContent.trim() || c.key;
-    // Resource bar: the resource comes from data-tour="res-<kind>" and the numbers by position,
-    // so this works in every game language ("<Wood> 34630 <of> 122000, 330 <per hour>").
-    const res = {};
-    document.querySelectorAll('button.res[data-tour^="res-"]').forEach((b) => {
-      const k = RES_MAP[b.dataset.tour.slice(4)];
-      if (!k) return;
-      const nums = (aria(b).match(/-?\d[\d.,]*/g) || []).map(parseNum).filter((n) => n != null);
-      if (nums.length < 2) return;
-      if (nums.length >= 3) res[k] = { v: nums[0], cap: nums[1], rate: nums[2] };
-      else res[k] = { v: nums[0], rate: nums[1] };
-    });
-    if (!Object.keys(res).length) return;
+    const res = D.readResources(document);
+    seen('resourceBar', !!res, res ? Object.keys(res).join(',') : null);
+    if (!res) return;
     const now = Date.now();
-    const patch = { key: c.key, name, cont: c.cont, x: c.x, y: c.y, res, seenAt: now };
-
-    // queue size: the construction-queue button's number; buildings: the "79/80" pill (both language-free)
-    const qBtn = document.querySelector('[data-tour="fab-queue"]');
-    let qCount = qBtn ? parseNum((qBtn.textContent.match(/\d+/) || ['0'])[0]) : null, bUsed = null, bMax = null;
-    document.querySelectorAll('.city-pill, button[aria-label]').forEach((b) => {
-      const m = b.textContent.trim().match(/^(\d+)\s*\/\s*(\d+)$/);
-      if (m && bUsed == null && b.classList.contains('city-pill')) { bUsed = +m[1]; bMax = +m[2]; }
-    });
-    if (bUsed != null) patch.buildings = { used: bUsed, max: bMax };
-
+    // the game's own production/h & capacity: mark as real (replaces a rate computed by "Refresh all cities")
+    for (const k of Object.keys(res)) { res[k].rateAt = now; res[k].calcAt = null; }
+    const patch = { key: c.key, name: c.name, cont: c.cont, x: c.x, y: c.y, res, seenAt: now };
+    const b = D.readBuildings(document);
+    if (b) patch.buildings = b;
+    const qCount = D.readQueueCount(document);
+    const panel = D.readQueuePanel(document, now); // Construction panel open → exact times
+    if (panel) seen('queuePanel', true);
     const queue = { count: qCount };
-    // Construction panel open? -> exact finish time of the whole queue.
-    const qt = document.querySelector('.sheet .queue-total');
-    if (qt) {
-      const total = parseDur(qt.querySelector('.num')?.textContent || qt.textContent);
-      if (total != null) { queue.endsAt = now + total; queue.measuredAt = now; }
-      const first = document.querySelector('.sheet .queue-item .li-sub .num');
-      const firstMs = parseDur(first?.textContent);
-      if (firstMs != null) queue.nextAt = now + firstMs;
-      queue.count = document.querySelectorAll('.sheet .queue-item').length || queue.count;
-    }
+    if (panel) { queue.endsAt = panel.endsAt; queue.measuredAt = now; if (panel.nextAt) queue.nextAt = panel.nextAt; queue.count = panel.count || queue.count; }
     if (queue.count === 0) { queue.endsAt = null; queue.nextAt = null; }
-    if (qCount != null || qt) patch.queue = queue;
-
-    update('cities', c.key, patch, !!qt);
+    if (qCount != null || panel) patch.queue = queue;
+    update('cities', c.key, patch, !!panel);
   }
 
   function scrapeSheets() {
-    document.querySelectorAll('.sheet').forEach((sheet) => {
-      const head = sheet.querySelector('.sheet-head');
-      const title = (head?.querySelector('h2')?.textContent || head?.innerText || '').trim();
-      if (capture.cities && /^Your cities/i.test(title)) scrapeCityList(sheet);
-      if (capture.dungeons) scrapeDungeon(sheet, title, head);
+    document.querySelectorAll(D.SEL.sheet).forEach((sheet) => {
+      if (capture.cities && D.isCityList(sheet, ownKeys)) scrapeCityList(sheet);
+      else if (capture.dungeons) scrapeDungeon(sheet);
     });
   }
 
   function scrapeCityList(sheet) {
-    sheet.querySelectorAll('.list-item').forEach((li) => {
-      const sub = li.querySelector('.li-sub')?.textContent || '';
-      const c = parseCoord(sub);
-      if (!c) return;
-      const name = li.querySelector('.li-title')?.textContent.trim();
-      const score = parseNum((sub.match(/score\s+([\d.,]+)/i) || [])[1]);
-      const troops = parseNum((sub.match(/([\d.,]+[km]?)\s+troops/i) || [])[1]);
-      const group = li.querySelector('.chip')?.textContent.trim() || '';
-      const list = { at: Date.now() };
-      li.querySelectorAll('.cost-item').forEach((ci) => {
-        const k = RES_MAP[(ci.querySelector('img')?.alt || '').toLowerCase()];
-        if (k) list[k] = parseNum(ci.textContent);
-      });
-      const busy = (li.innerText.match(/(\d+)\s+building/i) || [])[1];
-      update('cities', c.key, { key: c.key, name, cont: c.cont, x: c.x, y: c.y, score, troops, group, list, listBuilding: busy ? +busy : 0 });
-    });
+    const rows = D.readCityList(sheet);
+    seen('cityList', rows.length > 0, rows.length ? `${rows.length} · ${rows.some((r) => r.score != null) ? 'score' : 'no score'}` : null);
+    const at = Date.now();
+    for (const r of rows) {
+      const patch = { key: r.key, name: r.name, cont: r.cont, x: r.x, y: r.y, listAt: at };
+      if (r.group && !groupsFromState) patch.group = r.group; // the game state has the groups (all of them) when available
+      if (r.score != null) patch.score = r.score;
+      if (r.troops != null) patch.troops = r.troops;
+      update('cities', r.key, patch);
+    }
   }
 
-  function scrapeDungeon(sheet, title, head) {
-    const m = title.match(/^(.*?)\s*·\s*level\s*(\d+)/i);
-    if (!m) return;
-    const text = sheet.innerText;
-    if (!/explored|guardians|max loot/i.test(text)) return; // not a dungeon/boss panel
-    const c = parseCoord(head.querySelector('.small, .muted')?.textContent || text);
-    if (!c) return;
-    const lines = text.split('\n').map((s) => s.trim()).filter(Boolean);
-    const after = (label) => {
-      const i = lines.findIndex((l) => l.toLowerCase() === label);
-      return i >= 0 ? lines[i + 1] : null;
-    };
-    const name = m[1].trim();
-    const isDungeon = /dungeon/i.test(name);
-    const rec = {
-      key: c.key, cont: c.cont, x: c.x, y: c.y,
-      kind: isDungeon ? 'dungeon' : 'boss',
-      type: isDungeon ? name.replace(/\s*dungeon\s*/i, '').trim() : name,
-      level: +m[2],
-      explored: parseNum((after('explored') || '').replace('%', '')),
-      guardians: parseNum(after('guardians')),
-      maxLoot: parseNum(after('max loot')),
-      weakTo: after('weak to') || '',
-      seenAt: Date.now()
-    };
-    const isNew = !lastWrite['dungeons' + c.key];
-    update('dungeons', c.key, rec).then(() => isNew && alive && toast(tr('Disimpan: {x}', { x: `${name} L${rec.level} (${c.key})` })));
+  function scrapeDungeon(sheet) {
+    const rec = D.readDungeonPanel(sheet, knownDungeons);
+    if (!rec) return;
+    seen('dungeonPanel', true);
+    rec.seenAt = Date.now();
+    if (rec.explored == null) delete rec.explored; // keep what is known
+    const isNew = !lastWrite['dungeons' + rec.key];
+    update('dungeons', rec.key, rec).then(() => isNew && alive && toast(tr('Disimpan: {x}', { x: `${rec.type} L${rec.level} (${rec.key})` })));
   }
 
   // ---------- tiny feedback toast (pointer-events: none, never blocks the game) ----------
@@ -228,11 +220,6 @@
 
   // ---------- city layout share strings (game: City planner → Plans & share → Copy share string) ----------
   let lastShare = '';
-  function currentCity() {
-    const chip = document.querySelector('button.city-chip');
-    const c = parseCoord(chip?.querySelector('.sub')?.textContent);
-    return c ? { key: c.key, cont: c.cont, name: chip.querySelector('.name')?.textContent.trim() || c.key } : null;
-  }
   function onShareString(text) {
     if (!alive || !text || !/\[ShareString\.\d+\.\d+\][:;]/.test(text) || text === lastShare) return;
     lastShare = text;
@@ -246,14 +233,26 @@
     }
   }
   window.addEventListener('message', (e) => {
-    if (e.source !== window || !e.data) return;
+    if (e.source !== window || !e.data || !e.data.__louHelper || !ctxOk()) return;
+    try { onPageMessage(e); } catch (err) { report(err); }
+  });
+  // an error in a handler: an orphaned script switches off; anything else is noted for 🩺 Diagnostics
+  function report(err) {
+    if (contextGone(err)) stop(err);
+    else { console.warn('[LoU Helper]', err); diag.error = { msg: String(err && (err.message || err)).slice(0, 200), at: Date.now() }; }
+  }
+  function onPageMessage(e) {
+    const kind = e.data.__louHelper;
+    if (kind) { const m = diag.msgs[kind] || (diag.msgs[kind] = { n: 0 }); m.n++; m.at = Date.now(); }
+    if (kind === 'hook-status') diag.hook = { ...e.data.status, at: Date.now() };
+    if (kind === 'icons') onHookIcons(e.data.icons);
     if (e.data.__louHelper === 'share-string') onShareString(String(e.data.text));
     if (e.data.__louHelper === 'city-state') onCityState(e.data);
     if (e.data.__louHelper === 'movements') onMovements(e.data.data);
     if (e.data.__louHelper === 'cities-store' && capture.cities) onCitiesStore(e.data);
     if (e.data.__louHelper === 'map-cities') onMapCities(e.data.cities);
     if (e.data.__louHelper === 'map-dungeons' && capture.dungeons) onMapDungeons(e.data.dungeons);
-  });
+  }
 
   // Armies, incoming attacks, trades, recruitment (from the game's own state)
   let lastMovWrite = 0, movTimer = null, pendingMov = null;
@@ -261,9 +260,13 @@
   function onCitiesStore(d) {
     if (!alive || !Array.isArray(d.cities)) return;
     const off = d.serverOffset || 0; // server time = local time + offset
+    if (d.currentCityId != null) currentId = d.currentCityId;
+    ownKeys.clear();
     for (const c of d.cities) {
       if (c.x == null || c.y == null) continue;
       const key = `${c.x}:${c.y}`;
+      ownKeys.add(key);
+      ownById.set(c.id, { key, x: c.x, y: c.y, cont: c.cont, name: c.name });
       const patch = { key, name: c.name, cont: c.cont, x: c.x, y: c.y, water: c.water, castle: !!c.castle, gameId: c.id };
       if (c.res && c.resAt) {
         patch.res = {};
@@ -275,6 +278,9 @@
       const q = c.queue || {};
       patch.queue = { count: q.count || 0, nextAt: q.nextAt ? q.nextAt - off : null, endsAt: q.endsAt ? q.endsAt - off : null, measuredAt: Date.now() };
       patch.troopsHome = Object.values(c.home || {}).reduce((a, n) => a + (n || 0), 0);
+      if (c.troopsTotal != null) patch.troopsTotal = c.troopsTotal; // at home + on the move
+      if (c.score != null) patch.score = c.score; // from the map (any game language)
+      if (Array.isArray(c.groups)) { patch.group = c.groups.join(', '); groupsFromState = true; } // the player's city groups
       patch.wallLevel = c.wallLevel || 0;
       patch.towers = c.towers || {};
       update('cities', key, patch, false);
@@ -303,7 +309,7 @@
           p.cities[key] = { key, x: c.x, y: c.y, name: c.name, score: c.score, water: c.water, castle: c.castle, seenAt: now };
         }
         await chrome.storage.local.set({ players: all });
-      } catch (e) { stop(e); }
+      } catch (e) { lastPlayersSig = ''; stop(e); }
     });
   }
 
@@ -318,7 +324,7 @@
       lastMovWrite = Date.now();
       try {
         chrome.storage.local.set({ movements: { ...d, at: Date.now() } }).catch(stop);
-        if (d.incoming?.length) chrome.runtime.sendMessage({ type: 'incoming', list: d.incoming }).catch(() => {});
+        if (d.incoming?.length) chrome.runtime.sendMessage({ type: 'incoming', list: d.incoming, off: d.serverOffset || 0 }).catch(() => {});
       } catch (e) { stop(e); }
     };
     // incoming attacks go out immediately; everything else at most every 2 s
@@ -338,6 +344,7 @@
         for (const m of list) {
           const key = `${m.x}:${m.y}`;
           const type = String(m.type || '').replace(/^\w/, (ch) => ch.toUpperCase());
+          knownDungeons.set(key, { kind: m.kind === 'boss' ? 'boss' : 'dungeon', type, level: m.level, explored: m.progress != null ? Math.round(m.progress * 10) / 10 : null });
           all[key] = {
             ...(all[key] || {}), key, x: m.x, y: m.y, cont: all[key]?.cont ?? cont,
             kind: m.kind === 'boss' ? 'boss' : 'dungeon', type, level: m.level,
@@ -418,6 +425,24 @@
         setTimeout(() => { window.removeEventListener('message', onRes); reply({ ok: false, error: 'timeout' }); }, 15000);
         return true; // async reply
       }
+      // dashboard → 🩺 Diagnostics: this script's readings + a fresh status from the page hook
+      if (m?.type === 'lou-diag') {
+        const onStatus = (e) => {
+          if (e.source !== window || e.data?.__louHelper !== 'hook-status') return;
+          window.removeEventListener('message', onStatus);
+          clearTimeout(timer);
+          answer({ ...e.data.status, at: Date.now() });
+        };
+        const answer = (hook) => reply({
+          ok: true, alive, version: chrome.runtime.getManifest().version, url: location.origin + location.pathname,
+          gameLang: gameLangSeen, ownCities: ownKeys.size, knownDungeons: knownDungeons.size, capture, diag, hook,
+          visible: !document.hidden, ua: navigator.userAgent
+        });
+        const timer = setTimeout(() => { window.removeEventListener('message', onStatus); answer(null); }, 800);
+        window.addEventListener('message', onStatus);
+        window.postMessage({ __louHelperCmd: 'diag' }, location.origin);
+        return true; // async reply
+      }
       if (m?.type !== 'lou-refresh' || !alive) return;
       for (const k of Object.keys(lastWrite)) delete lastWrite[k];
       window.postMessage({ __louHelperCmd: 'refresh' }, location.origin);
@@ -432,34 +457,28 @@
   });
 
   // ---------- building / node icons as drawn by the game (Build bar + Guide), cached locally for the planner ----------
-  const ICON_NAMES = new Set(["Woodcutter's Hut", 'Quarry', 'Iron Mine', 'Farm', 'Sawmill', 'Stonemason', 'Foundry', 'Mill', 'Cottage',
-    'Warehouse', 'Hideout', 'Townhouse', 'Marketplace', 'Harbor', 'Barracks', 'City Guard House', 'Training Ground', 'Stable',
-    'Moonglow Tower', 'Trinsic Temple', 'Workshop', 'Shipyard', 'Castle', 'Town Hall', 'Forest', 'Rocks', 'Ore Deposit', 'Lake']);
+  // Two sources: the page hook finds them by the game's own icon keys ("building:farm" → any game language);
+  // this script also matches English names on the page (fallback).
   const iconSeen = {};
-  let iconBusy = false;
-  function scrapeIcons() {
-    if (iconBusy) return;
+  let iconBusy = false, iconQueue = {};
+  function scrapeIcons() { saveIcons(D.readIcons(document)); }
+  function onHookIcons(byCode) {
     const found = {};
-    document.querySelectorAll('button.bb-item').forEach((b) => {
-      const name = b.getAttribute('aria-label');
-      const src = b.querySelector('img')?.getAttribute('src');
-      if (ICON_NAMES.has(name) && src && src.startsWith('data:image/')) found[name] = src;
-    });
-    document.querySelectorAll('img[alt]').forEach((im) => {
-      const name = im.getAttribute('alt');
-      const src = im.getAttribute('src');
-      if (ICON_NAMES.has(name) && src && src.startsWith('data:image/') && !found[name]) found[name] = src;
-    });
-    // building panels (e.g. tapping the Town Hall) show the same icon in their header
-    document.querySelectorAll('.sheet-head').forEach((h) => {
-      const name = (h.querySelector('h2')?.textContent || '').split('·')[0].trim();
-      const src = h.querySelector('img')?.getAttribute('src');
-      if (ICON_NAMES.has(name) && src && src.startsWith('data:image/') && !found[name]) found[name] = src;
-    });
-    const fresh = Object.entries(found).filter(([n, s]) => iconSeen[n] !== s.length);
+    for (const [code, src] of Object.entries(byCode || {})) {
+      const name = D.ICON_BY_CODE[code];
+      if (name && typeof src === 'string' && src.startsWith('data:image/')) found[name] = src;
+    }
+    saveIcons(found);
+  }
+  function saveIcons(found) {
+    if (!ctxOk()) return;
+    Object.assign(iconQueue, found);
+    if (iconBusy) return;
+    const fresh = Object.entries(iconQueue).filter(([n, s]) => iconSeen[n] !== s.length);
+    iconQueue = {};
     if (!fresh.length) return;
     iconBusy = true;
-    chrome.storage.local.get('gameIcons').then(async (d) => {
+    Promise.resolve().then(() => chrome.storage.local.get('gameIcons')).then(async (d) => {
       const all = d.gameIcons || {};
       let changed = false;
       const added = [];
@@ -469,41 +488,44 @@
         if (all[n] !== s) { all[n] = s; changed = true; }
       }
       if (changed) await chrome.storage.local.set({ gameIcons: all });
+      seen('icons', true, `${Object.keys(all).length}/28`);
       if (added.length) toast(tr('Ikon game tersimpan ({n}/28): {l}', { n: Object.keys(all).length, l: added.slice(0, 6).join(', ') + (added.length > 6 ? '…' : '') }), 4000);
-    }).catch(stop).finally(() => { iconBusy = false; });
+    }).catch(stop).finally(() => { iconBusy = false; if (alive && Object.keys(iconQueue).length) saveIcons({}); });
   }
 
   // ---------- loop ----------
   let scheduled = false;
   function tick() {
     scheduled = false;
-    if (!alive) return;
+    if (!ctxOk()) return;
     try {
       if (capture.cities) scrapeActiveCity();
       scrapeSheets();
       scrapeIcons();
-    } catch (e) {
-      if (/context invalidated/i.test(String(e))) stop(e);
-      else console.warn('[LoU Helper] scrape error', e);
-    }
+    } catch (e) { report(e); }
   }
   function schedule() {
-    if (scheduled) return;
+    if (scheduled || !alive) return;
     scheduled = true;
     setTimeout(tick, 700); // debounce bursts of DOM mutations
   }
 
-  const observer = new MutationObserver(schedule);
+  observer = new MutationObserver(schedule);
   observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['aria-label'] });
-  setInterval(schedule, 30000);
+  pollTimer = setInterval(schedule, 30000);
 
-  chrome.storage.local.get(['settings', 'movements']).then((d) => {
+  Promise.resolve().then(() => chrome.storage.local.get(['settings', 'movements', 'dungeons'])).then((d) => {
     if (d.settings?.capture) capture = { ...capture, ...d.settings.capture };
+    for (const [k, x] of Object.entries(d.dungeons || {})) if (x && x.level) knownDungeons.set(k, { kind: x.kind, type: x.type, level: x.level, explored: x.explored ?? null });
     applyLang(d.settings?.lang || 'id', d.movements?.lang);
     schedule();
   }).catch(stop);
-  chrome.storage.onChanged.addListener((ch) => {
+  try {
+    chrome.storage.onChanged.addListener(onStorageChanged);
+  } catch (e) { stop(e); }
+  function onStorageChanged(ch) {
+    if (!alive) return;
     if (ch.settings?.newValue?.capture) capture = { ...capture, ...ch.settings.newValue.capture };
     if (ch.settings?.newValue) applyLang(ch.settings.newValue.lang || 'id', null);
-  });
+  }
 })();

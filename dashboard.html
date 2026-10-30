@@ -11,25 +11,17 @@
   <header class="app">
     <img src="icons/icon48.png" alt="">
     <h1>LoU Revival Helper <span class="ver" id="ver"></span></h1>
-    <nav class="tabs">
-      <a href="#kota" data-view="kota">🏰 Ringkasan Kota</a>
-      <a href="#layout" data-view="layout">📐 Perencana Layout</a>
-      <a href="#gerak" data-view="gerak">🚩 Pergerakan <span class="nav-badge hide" id="nav-inc"></span></a>
-      <a href="#operasi" data-view="operasi">🎯 Operasi</a>
-      <a href="#menteri" data-view="menteri">🎩 Set Ministers</a>
-      <a href="#dungeon" data-view="dungeon">⚔️ Dungeon &amp; Boss</a>
-      <a href="#statistik" data-view="statistik">📈 Statistik</a>
-      <a href="#pemain" data-view="pemain">👥 Pemain</a>
-      <a href="#pengaturan" data-view="pengaturan">⚙️ Pengaturan</a>
-      <a href="#cheat" data-view="cheat">📜 Cheat Sheet</a>
-      <a href="#tentang" data-view="tentang">ℹ️ Tentang</a>
-    </nav>
+    <nav class="tabs" aria-label="Menu"><a href="#kota" data-view="kota">🏰</a><span class="nav-badge hide" id="nav-inc"></span></nav>
     <span class="grow"></span>
+    <button class="btn sm nav-search" id="nav-search" type="button">🔎 <kbd>Ctrl K</kbd></button>
+    <span class="small muted num" id="srv-clock"></span>
     <span class="small muted row" id="live"><span class="status-dot"></span><span>—</span></span>
   </header>
 
   <main>
     <section class="view" id="view-kota"></section>
+    <section class="view" id="view-todo"></section>
+    <section class="view" id="view-timeline"></section>
     <section class="view" id="view-layout"></section>
     <section class="view" id="view-gerak"></section>
     <section class="view" id="view-operasi"></section>

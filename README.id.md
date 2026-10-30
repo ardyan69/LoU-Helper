@@ -2,7 +2,7 @@
 
 🇮🇩 Bahasa Indonesia · [English](README.md)
 
-Versi 1.18.0 · dibuat oleh **ardhie** · ardhie.andro@gmail.com
+Versi 1.24.2 · dibuat oleh **ardhie** · ardhie.andro@gmail.com
 
 Alat bantu untuk **Lord of Ultima: Revival** (lordofultima.me):
 
@@ -94,13 +94,18 @@ Notifikasi desktop (gudang penuh, serangan masuk) tidak tersedia di Safari — p
 - **Jam selesai antrian:** buka panel *Construction* sekali per kota.
 - **Dungeon:** tab *Region*, lalu klik ikon dungeon atau boss. Akan muncul pesan kecil "Disimpan".
 - **Layout kota:** otomatis untuk semua kota sekaligus. Layout-nya muncul di Perencana Layout sebagai "🏰 nama kota — kondisi di game" (hanya-baca). Klik *Duplikat* untuk membuat rencana yang bisa diedit.
+- **Pencarian & pintasan:** Ctrl+K / ⌘K atau `/` mencari kota, pemain, dungeon, koordinat, layout dan menu; Alt+1…0 untuk pindah tab. Tema (gelap / terang / ikuti sistem): Pengaturan.
+- **Stok kota:** game menyimpan stok tiap kota pada satu waktu lalu menambah produksi/jam sendiri; Ringkasan Kota melakukan hal yang sama. *Update* menunjukkan kapan stok terakhir persis (↗ = diproyeksikan sejak itu); ≈ = produksi/jam dihitung dari layout kota karena kota itu belum dibuka di game.
+- **To-do & Timeline:** *To-do* berisi yang perlu dikerjakan sekarang di semua kota (serangan, makanan, gudang penuh, antrian kosong, pasukan menganggur, dungeon yang sudah habis); 💤 menyembunyikan item selama 1 atau 8 jam. *Timeline* menampilkan serangan masuk, pasukan sendiri, gerobak/kapal dagang, antrian bangun dan rekrut semua kota dalam satu sumbu waktu.
+- **Penyerang tersembunyi:** kalau unit serangan masuk tidak terlihat, Pergerakan dan notifikasi menebak jenis unitnya dari kecepatan pasukan (menit per field).
+- **Aktivitas pemain:** tab Pemain menyimpan skor total tiap pemain dari waktu ke waktu (dari peta) dan menandai pemain aktif / tidak aktif; urutkan dengan *Target* untuk melihat pemain tidak aktif terdekat lebih dulu.
 - Dashboard bisa dibuka lewat popup ikon extension, atau klik kanan ikon lalu pilih *Options* (Firefox: *Manage Extension* → *Preferences*).
 
 ## Bahasa
 Pengaturan → 🌐 Bahasa: Bahasa Indonesia, English, Español, Français, Deutsch, Italiano, Magyar, Ελληνικά, atau **Ikuti bahasa game** (otomatis memakai bahasa yang dipilih di game). Nama bangunan & istilah game tetap memakai nama dari game.
 
 ## Ikon bangunan
-Ikon & nama bangunan di Perencana Layout diambil dari game saat kamu membuka **Build bar**, **Guide → Your city & the grid** (node alam), dan panel **Town Hall**. Ikon disimpan lokal di browser (tidak dibundel di extension); sebelum tertangkap, emoji dipakai sebagai cadangan.
+Ikon bangunan di Perencana Layout diambil dari game setiap kali game menampilkannya (tampilan kota, **Build bar**, **Guide → Your city & the grid** untuk node alam, panel bangunan) — dikenali lewat kunci ikon milik game, jadi di bahasa game apa pun. Ikon disimpan lokal di browser (tidak dibundel di extension); sebelum tertangkap, emoji dipakai sebagai cadangan.
 
 ## Keamanan
 Extension ini **membaca** data yang sudah ada di halaman game (teks di layar dan data kota milik game). Extension tidak mengklik apa pun dan tidak mengotomasi permainan. Ada satu pengecualian, dan hanya terjadi saat kamu klik dan mengonfirmasi: **🎩 Set Ministers → Terapkan ke game** mengirim setelan minister (Build, Defense, War, Trade, serta menyalakan/mematikan minister) memakai perintah yang sama dengan layar Ministers di game. Tidak ada hal lain yang dikirim ke game. Semua data disimpan lokal di penyimpanan extension browser kamu (`chrome.storage` / `browser.storage`).
@@ -110,15 +115,22 @@ Extension ini **membaca** data yang sudah ada di halaman game (teks di layar dan
 - Daya angkut, kecepatan dasar, dan kekuatan unit di Pengaturan diambil dari data game Revival. Menit/field dikalibrasi otomatis dari pergerakan pasukanmu (bisa dimatikan di Pengaturan).
 - Emas di Revival dihitung per akun (setiap kota menampilkan total semua kota), jadi tidak dijumlahkan per kota.
 - Data kota dibaca tanpa bergantung bahasa game: resource, antrian, dan pasukan semua kota dari data game; produksi/jam & kapasitas dari resource bar kota aktif.
-- Kalau tampilan game berubah (update), pembaca data mungkin perlu disesuaikan. Logikanya ada di `content.js`.
+- Kalau game berubah (update), **ℹ️ Tentang → 🩺 Diagnostik** menunjukkan sumber data mana yang tidak lagi terbaca (state game, data kota, pergerakan, layout, peta, resource bar, panel, ikon, penyimpanan) dan bisa menyalin laporan untuk email bug. Pembacanya ada di dua tempat: `page-hook.js` membaca state game (blok *GAME STATE* di atasnya mendaftar semua field yang dipakai) dan `lib/game-dom.js` membaca halaman (semua selector, beberapa label bahasa Inggris, dan parser), diuji dengan contoh HTML game di `tests/fixtures/`.
 
 ## Pengembangan
-Node 18+. Folder sumbernya sendiri sudah berupa extension Chrome/Edge (bisa langsung *Load unpacked*, tanpa build); Firefox dan Safari butuh langkah build kecil.
+Node 20+ (`.nvmrc`). Folder sumbernya sendiri sudah berupa extension Chrome/Edge (bisa langsung *Load unpacked*, tanpa build); Firefox dan Safari butuh langkah build kecil.
 
-- `npm install` — sekali saja (esbuild untuk bundel background Firefox/Safari, web-ext untuk lint Firefox).
+- `npm install` — sekali saja (esbuild, web-ext, ESLint, TypeScript, linkedom untuk tes).
+- `npm run check` — semua yang dijalankan CI: `npm run lint` (ESLint), `npm run typecheck` (TypeScript memeriksa JavaScript di `lib/` dan `background.js` lewat JSDoc, tidak ada yang dikompilasi) dan `npm test`.
+- `npm test` — tes rumus game (produksi, kapasitas, troop space, recruit %), template layout, urutan bangun, operasi & minister, notifikasi & riwayat, pembaca halaman game (terhadap HTML di `tests/fixtures/`), data dungeon/boss dan diagnostik, cek terjemahan, dan memastikan semua file hasil generate sudah terbaru.
 - `npm run build` — membangun `dist/chrome`, `dist/edge`, `dist/firefox` dan `dist/safari` beserta `dist/lou-helper-<versi>-<browser>.zip` (Firefox: `.xpi`). Satu browser saja: `node tools/build.mjs firefox`.
 - `npm run lint:firefox` — mengecek paket Firefox dengan linter Mozilla.
-- `npm test` — tes rumus game (produksi, kapasitas, troop space, recruit %), template layout, urutan bangun, operasi & minister, dan cek terjemahan (semua teks UI harus ada di semua file bahasa; `node tests/i18n-check.mjs --unused` juga menampilkan key yang tidak lagi ditemukan di kode).
+
+**Terjemahan.** Teks UI ditulis dalam bahasa Indonesia di kode, `t('Teks')`, dan teks itu menjadi key di setiap `lib/i18n/<bahasa>.js`. `npm run i18n -- check` menampilkan terjemahan yang hilang, terjemahan yang `{placeholder}` atau `<tag>`-nya berbeda, dan — bila sebuah teks diubah kata-katanya di kode — key lamanya beserta perintah rename yang tepat. `npm run i18n -- rename "<lama>" "<baru>"` mengganti sebuah teks di semua kamus dan di kode sekaligus (terjemahan tetap); `npm run i18n -- unused` / `prune --yes` menampilkan / menghapus key yang tidak terpakai.
+
+**File hasil generate** (`npm run docs`, juga bagian dari `npm run build`): versi di `manifest.json`, `package.json` dan README diambil dari entri teratas `lib/changelog.js`; `CHANGELOG.md`/`CHANGELOG.id.md`, `_locales/<bahasa>/messages.json` (nama & deskripsi extension di toko sesuai bahasa browser, dari `lib/meta.js`) dan `lib/i18n/content-dict.js` ditulis dari sumbernya. `npm test` gagal bila salah satunya tertinggal.
+
+**Rilis.** 1) Tambahkan versi baru di atas `lib/changelog.js` (teks Indonesia) dan teks Inggrisnya di `lib/i18n/en.js` (+ bahasa lain); 2) `npm run build` dan `npm run check`; 3) commit, `git tag v<versi>`, `git push --tags`. GitHub Actions (`.github/workflows/release.yml`) memastikan tag sama dengan versi, menjalankan semua cek, membangun semua browser, dan menerbitkan GitHub release berisi paket & teks Change Log (`npm run release:notes` menampilkannya). Setiap push/PR menjalankan `ci.yml` (cek yang sama, paket disimpan sebagai artifact).
 
 Yang diubah build per browser: Firefox memakai background *event page* (`background.js` dibundel) dan id `browser_specific_settings.gecko`; Safari memakai background service worker klasik, tanpa izin `notifications`, dan page hook disisipkan oleh `content.js` (bukan content script `world: "MAIN"`). `lib/compat.js` memetakan `chrome.*` ke `browser.*` bila perlu.
 

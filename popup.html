@@ -14,9 +14,14 @@
     .mc b { font-size: 13px; }
     .mc .row { justify-content: space-between; }
     .btns { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 6px; }
-    .alert { background: #4a1d16; border: 1px solid var(--bad); border-radius: 8px; padding: 8px 10px; font-size: 12px; }
+    .alert { background: var(--alert-bg); border: 1px solid var(--bad); border-radius: 8px; padding: 8px 10px; font-size: 12px; }
     .mvline { font-size: 12px; color: var(--muted); }
     .btns .btn { text-align: center; font-size: 12px; }
+    .mc[data-open] { cursor: pointer; }
+    .mc[data-open]:hover { border-color: var(--gold); }
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .chips .pill { cursor: pointer; }
+    .chips .pill:hover { border-color: var(--gold); }
   </style>
 </head>
 <body>
@@ -24,6 +29,7 @@
     <div class="top"><img src="icons/icon48.png" alt=""><h1>LoU Helper</h1><span class="grow"></span><span class="small muted" id="p-live"></span></div>
     <div id="p-perm"></div>
     <div id="p-alert"></div>
+    <div class="chips" id="p-chips"></div>
     <div class="p-list" id="p-list"></div>
     <div class="mvline" id="p-mv"></div>
     <div class="btns">

@@ -441,3 +441,11 @@ function parseDur(s) {
   }
   return hit ? ms : null;
 }
+
+// "#dungeon/<x:y>" (search): show that dungeon in the list
+export function focus(key) {
+  if (!key) return;
+  part = 'list'; f.q = key;
+  const q = root.querySelector('#f-q'); if (q) q.value = key;
+  render(ctx.state);
+}

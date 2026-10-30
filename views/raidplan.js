@@ -3,7 +3,7 @@
 // (dungeon strength & max loot by level/explored %, unit efficiency, losses, travel time).
 import { esc, fmtNum, fmtDur, dist } from '../lib/shared.js';
 import { t, locale } from '../lib/i18n.js';
-import { unitById, DUNGEON_UNITS, dungeonLevel, dungeonNeed, raid, unitEff } from '../lib/cheatsheet.js';
+import { unitById, DUNGEON_UNITS, dungeonNeed, raid, unitEff } from '../lib/cheatsheet.js';
 
 const KIND_ICO = { mountain: '🏔️', forest: '🌲', hill: '⛰️', sea: '🌊' };
 const p = { city: '', maxD: 15, kinds: 'all', away: true, partial: true, maxExp: 100 };

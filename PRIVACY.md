@@ -2,7 +2,7 @@
 
 🇬🇧 English · [Bahasa Indonesia](PRIVACY.id.md)
 
-**Effective date:** 30 October 2026 · applies to version 1.18.1 and later
+**Effective date:** 31 October 2026 · applies to version 1.20.1 and later
 
 **Developer:** ardhie — ardhie.andro@gmail.com
 
@@ -27,7 +27,7 @@ The extension does **not** read or store: your password or login details, cookie
 Layout plans, notes and relation tags for players, raid notes, attack/defense plans, minister drafts, settings (language, notifications, unit values) and the inputs of the dashboard tools.
 
 ### c) Derived data
-Statistics calculated from the above, such as hourly snapshots of score, troops and production (up to 60 days), raid loot logs and speed calibration.
+Statistics calculated from the above, such as snapshots of score, troops and production (hourly for 7 days, then one per day up to 60 days), raid loot logs and speed calibration.
 
 ## 2. How the data is used
 Only to provide the features you see in the extension: overviews, calculations, recommendations, countdowns and desktop notifications (for example a full warehouse, an incoming attack, or finished training). It is never used for advertising, profiling, credit or lending decisions, or any purpose unrelated to these features.
@@ -50,6 +50,7 @@ Only to provide the features you see in the extension: overviews, calculations, 
 |---|---|
 | Access to `https://lordofultima.me/*` | Read game data on the game's pages and apply minister settings when you ask. No other website is accessed. |
 | `storage` | Save the data described above locally in your browser. |
+| `unlimitedStorage` | Lift the browser's 10 MB limit for that local storage, so big accounts (many cities, a large map) don't stop saving data. Nothing leaves your browser. |
 | `alarms` | Schedule reminders (full warehouse, finished training, arriving convoys). |
 | `notifications` | Show those reminders as desktop notifications (not used in Safari). |
 | `scripting` | Re-attach the extension to an already-open game tab after an install or update, so you don't have to reload the game. |

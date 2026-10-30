@@ -1,0 +1,14 @@
+{
+  "appName": {
+    "message": "LoU Revival Helper",
+    "description": "Extension name"
+  },
+  "appShortName": {
+    "message": "LoU Helper",
+    "description": "Short name (toolbar button)"
+  },
+  "appDesc": {
+    "message": "Ringkasan kota, perencana layout, pasukan, dungeon & minister untuk Lord of Ultima: Revival. Dibuat oleh ardhie.",
+    "description": "Store description, max 132 characters"
+  }
+}

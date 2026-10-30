@@ -2,7 +2,7 @@ import { RES, RES_LABEL, RES_ICON, accountGold, projected, fullAt, emptyAt, fmtN
 import { t, locale } from '../lib/i18n.js';
 import * as transfer from './transfer.js';
 import { cityFood } from '../lib/food.js';
-import { refreshAllRates } from '../lib/cityrates.js';
+import { refreshAllRates, withEstimates } from '../lib/cityrates.js';
 import { rpct, researchLevels } from '../lib/research.js';
 
 let root, ctx, sortBy = 'full', sortDir = 1;
@@ -87,7 +87,8 @@ function earliestFull(c, pct) {
 export function render(state) {
   if (!root) return;
   const pct = state.settings.alerts.fullThreshold;
-  const list = Object.values(state.cities);
+  // cities never opened in the game get production/h from their layout, so their stock moves too (≈)
+  const list = Object.values(state.cities).map((c) => withEstimates(state, c));
   const now = Date.now();
 
   // summary (one line)
@@ -117,7 +118,7 @@ export function render(state) {
 
   const latest = Math.max(0, ...list.map((c) => Math.max(c.syncedAt || 0, c.seenAt || 0)));
   root.querySelector('#c-stale').innerHTML = latest && now - latest > 5 * 60000
-    ? `<div class="banner">⚠️ ${t('Data terakhir masuk <b>{x}</b>. Kalau game sedang terbuka tapi angka tidak bergerak, refresh tab game (F5) sekali. Ingat: tiap kota hanya terbaca saat kota itu sedang aktif di game — angka di bawah tetap diproyeksikan dari produksi/jam.', { x: fmtAgo(latest) })}</div>`
+    ? `<div class="banner">⚠️ ${t('Data terakhir masuk <b>{x}</b>. Kalau game sedang terbuka tapi angka tidak bergerak, refresh tab game (F5) sekali. Ingat: tiap kota hanya terbaca saat kota itu sedang aktif di game — angka di bawah tetap diproyeksikan dari produksi/jam.', { x: fmtAgo(latest) })} <a href="#tentang/diag">🩺 ${t('Periksa di Diagnostik')}</a></div>`
     : '';
   if (!list.length) {
     root.querySelector('#c-list').innerHTML = `<div class="empty">${t('<b>Belum ada kota.</b><br>Buka <a href="https://lordofultima.me/" target="_blank">lordofultima.me</a>, login, lalu pindah-pindah kota sebentar. Data akan muncul di sini otomatis.')}</div>`;
@@ -148,13 +149,12 @@ function sortKey(c, key, pct, now) {
     case 'group': return String(c.group || '~');
     case 'seen': return -(c.seenAt || 0);
     case 'score': return -(c.score ?? -1);
-    case 'troops': return -(c.troops ?? -1);
+    case 'troops': return -(c.troops ?? c.troopsTotal ?? c.troopsHome ?? -1);
     case 'bld': return -(c.buildings?.used ?? -1);
     case 'gold': return -(c.res?.gold ? projected(c.res.gold, c.seenAt, now) : -1);
     case 'rate': return c.res?.[r]?.rate == null ? Infinity : -c.res[r].rate;
     case 'v': return -(resInfo(c, r, pct, now)?.v ?? -1);
     case 'p': return -(resInfo(c, r, pct, now)?.p ?? -1);
-    case 'rate': return -(c.res?.[r]?.rate ?? -1e9);
     case 'cap': return -(c.res?.[r]?.cap ?? -1);
     case 'eta': { const i = resInfo(c, r, pct, now); return i?.etaAt ?? Infinity; }
     default: return 0;
@@ -216,9 +216,9 @@ function tableList(list, pct, now) {
       <td>${first}</td>
       <td>${queueCell(c, now)}</td>
       <td class="r num ${c.buildings && c.buildings.used >= c.buildings.max ? 'warn-t' : ''}">${c.buildings ? `${c.buildings.used}/${c.buildings.max}` : '—'}</td>
-      <td class="r num">${c.troops != null ? fmtNum(c.troops) : c.troopsHome != null ? fmtNum(c.troopsHome) : '—'}</td>
+      <td class="r num">${fmtNum(c.troops ?? c.troopsTotal ?? c.troopsHome)}</td>
       <td class="r num">${c.score != null ? fmtNum(c.score) : '—'}</td>
-      <td class="small muted">${c.syncedAt || c.seenAt ? fmtAgo(Math.max(c.syncedAt || 0, c.seenAt || 0)) : '—'}</td>
+      ${ageCell(c, now)}
       ${delCell(c)}
     </tr>`;
   }).join('');
@@ -255,7 +255,7 @@ function tableDetail(list, pct, now) {
       <td class="r num">${c.res?.gold ? '+' + fmtNum(c.res.gold.rate) : ''}</td>
       <td class="gs">${queueCell(c, now)}</td>
       <td class="r num">${c.buildings ? `${c.buildings.used}/${c.buildings.max}` : '—'}</td>
-      <td class="small muted">${c.syncedAt || c.seenAt ? fmtAgo(Math.max(c.syncedAt || 0, c.seenAt || 0)) : '—'}</td>
+      ${ageCell(c, now)}
       ${delCell(c)}
     </tr>`;
   }).join('');
@@ -308,7 +308,7 @@ function card(c, pct, now) {
         <span class="ico" title="${RES_LABEL[r]}">${RES_ICON[r]}</span>
         <div class="bar"><i style="width:${p.toFixed(1)}%;background:${color}"></i></div>
         <span class="num small">${fmtNum(v)} / ${fmtNum(x.cap)}</span>
-        <div class="meta"><span class="num">${x.rate >= 0 ? '+' : ''}${fmtNum(x.rate)}${t('/j')}</span><span>${eta}</span></div>`;
+        <div class="meta"><span class="num"${x.est || x.calcAt ? ` title="${esc(t('Dihitung dari layout game + riset (Refresh semua kota)'))}"` : ''}>${x.rate >= 0 ? '+' : ''}${fmtNum(x.rate)}${t('/j')}${x.est || x.calcAt ? ' ≈' : ''}</span><span>${eta}</span></div>`;
     }).join('');
     if (c.res.gold) body += `<span class="ico">${RES_ICON.gold}</span><span class="num small">${fmtNum(projected(c.res.gold, c.seenAt, now))}</span><span class="num small muted">+${fmtNum(c.res.gold.rate)}${t('/j')}</span>`;
     body = `<div class="resbar">${body}</div>`;
@@ -323,7 +323,7 @@ function card(c, pct, now) {
         <h3>${esc(c.name)}</h3>
         <a href="#" class="small muted" data-copy="${c.key}" title="${t('Salin koordinat')}">C${c.cont ?? '?'} · ${c.key}</a>
         <span class="grow"></span>
-        <span class="small muted" title="${c.seenAt ? new Date(c.seenAt).toLocaleString(locale()) : ''}">${c.seenAt ? fmtAgo(c.seenAt) : ''}</span>
+        <span class="small muted" title="${esc(ageTitle(c))}">${ageText(c, now)}</span>
       </div>
       <div class="row">${pills.join('')}${queue}</div>
       ${body}
@@ -331,7 +331,13 @@ function card(c, pct, now) {
     </div>`;
 }
 
-export function onData(state) { render(state); }
+// hidden → nothing to do (the tab is rendered again when it is opened); only data this view shows
+const CITY_KEYS = ['cities', 'layouts', 'movements', 'settings'];
+export function onData(state, keys) {
+  if (!root?.classList.contains('on') || !keys.some((k) => CITY_KEYS.includes(k))) return;
+  if (root.contains(document.activeElement) && document.activeElement.tagName === 'SELECT') return; // don't close an open dropdown
+  render(state);
+}
 
 // ---------- 🌾 army food balance ----------
 const sNum = (n) => (n == null ? '—' : `${n >= 0 ? '+' : ''}${fmtNum(n)}`);
@@ -365,10 +371,28 @@ function foodTable(state, list, now) {
     </tbody></table></div>`;
 }
 
+// "Update": when the shown stock was exact. The game keeps one snapshot per city (exact at that moment; up to
+// hours old for cities not open in the game) and adds production/h × the time since — so does this view.
+const estimated = (c) => !!c.res && RES.some((r) => c.res[r]?.est || c.res[r]?.calcAt);
+function ageText(c, now) {
+  if (!c.seenAt) return c.syncedAt ? fmtAgo(c.syncedAt) : '—';
+  return `${fmtAgo(c.seenAt)}${now - c.seenAt > 5 * 60000 && c.res ? ` <span title="${esc(t('Diproyeksikan dengan produksi/jam'))}">↗</span>` : ''}${estimated(c) ? ' ≈' : ''}`;
+}
+function ageTitle(c) {
+  const lines = [];
+  if (c.seenAt) lines.push(t('Stok persis dari game: {x}. Sesudahnya dihitung dengan produksi/jam, seperti di game.', { x: new Date(c.seenAt).toLocaleString(locale()) }));
+  if (c.syncedAt) lines.push(t('Terakhir tersinkron dengan game: {x}', { x: new Date(c.syncedAt).toLocaleString(locale()) }));
+  if (estimated(c)) lines.push(t('≈ Produksi/jam dihitung dari layout + riset (kota ini belum dibuka di game sejak lama).'));
+  return lines.join('\n');
+}
+function ageCell(c, now) {
+  return `<td class="small muted" title="${esc(ageTitle(c))}">${ageText(c, now)}</td>`;
+}
+
 // production/h cell (≈ = computed from the synced layout by "Refresh all cities")
 function rateCell(x) {
   if (!x || x.rate == null) return '<td class="r num muted rate-col">—</td>';
-  const calc = x.calcAt ? ` <span class="muted small" title="${t('Dihitung dari layout game + riset (Refresh semua kota)')}">≈</span>` : '';
+  const calc = x.calcAt || x.est ? ` <span class="muted small" title="${t('Dihitung dari layout game + riset (Refresh semua kota)')}">≈</span>` : '';
   return `<td class="r num rate-col" style="color:${x.rate < 0 ? 'var(--bad)' : 'inherit'}">${x.rate >= 0 ? '+' : ''}${fmtNum(x.rate)}${calc}</td>`;
 }
 
@@ -386,10 +410,27 @@ async function refreshAll() {
   const st = { ...ctx.state, cities: fresh.cities || ctx.state.cities, layouts: fresh.layouts || ctx.state.layouts, movements: fresh.movements || ctx.state.movements };
   const patch = refreshAllRates(st);
   const n = Object.keys(patch).length;
-  if (n) await ctx.save({ cities: { ...st.cities, ...patch } });
+  if (n) {
+    // merge into the newest stored cities (the game tab may have written meanwhile)
+    const { cities: latest = {} } = await chrome.storage.local.get('cities');
+    const merged = { ...latest };
+    for (const [k, c] of Object.entries(patch)) merged[k] = { ...(latest[k] || {}), res: { ...(latest[k]?.res || {}), ...Object.fromEntries(Object.entries(c.res).filter(([, x]) => x?.calcAt)) } };
+    await ctx.save({ cities: merged });
+  }
   btn.disabled = false;
   render(ctx.state);
-  ctx.toast(tabs
-    ? t('Diperbarui dari game · produksi/jam {n} kota dihitung ulang dari layout', { n })
-    : t('Tab game tidak terbuka (atau perlu F5) · produksi/jam {n} kota dihitung ulang dari layout', { n }));
+  const real = patch.realKept || 0;
+  ctx.toast((tabs ? t('Diperbarui dari game') : t('Tab game tidak terbuka (atau perlu F5)')) + ' · ' +
+    t('produksi/jam: {n} kota dihitung dari layout, {r} resource memakai angka asli dari game', { n, r: real }));
+}
+
+// "#kota/<x:y>" (search, popup): show that city · "#kota/sort=queue" etc.: sort the list
+export function focus(arg) {
+  if (!arg) return;
+  const m = arg.match(/^sort=(\w+)$/);
+  if (m) { sortBy = m[1]; sortDir = 1; const s = root.querySelector('#c-sort'); if (s && [...s.options].some((o) => o.value === sortBy)) s.value = sortBy; render(ctx.state); return; }
+  const el = root.querySelector(`[data-copy="${CSS.escape(arg)}"]`)?.closest('.city, tr');
+  if (!el) return;
+  el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
 }

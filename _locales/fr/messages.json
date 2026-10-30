@@ -1,0 +1,14 @@
+{
+  "appName": {
+    "message": "LoU Revival Helper",
+    "description": "Extension name"
+  },
+  "appShortName": {
+    "message": "LoU Helper",
+    "description": "Short name (toolbar button)"
+  },
+  "appDesc": {
+    "message": "Résumé des villes, planificateur de layout, troupes, donjons et ministres pour Lord of Ultima: Revival. Par ardhie.",
+    "description": "Store description, max 132 characters"
+  }
+}

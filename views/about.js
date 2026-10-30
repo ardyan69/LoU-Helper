@@ -2,6 +2,7 @@
 import { esc } from '../lib/shared.js';
 import { CHANGELOG, CREDIT } from '../lib/changelog.js';
 import { t, getLang } from '../lib/i18n.js';
+import * as diag from './diag.js';
 
 let root, part = 'readme';
 const version = () => chrome.runtime.getManifest().version;
@@ -15,18 +16,22 @@ export function mount(el) {
         <button data-part="readme">📖 ReadMe</button>
         <button data-part="credit">🙏 ${t('Credit')}</button>
         <button data-part="changelog">📝 Change Log</button>
+        <button data-part="diag">🩺 ${t('Diagnostik')}</button>
       </div>
     </div>
     <div id="a-body"></div>`;
   root.querySelector('#a-seg').addEventListener('click', (e) => {
     const b = e.target.closest('[data-part]');
-    if (b) { part = b.dataset.part; render(); }
+    if (b) { part = b.dataset.part; history.replaceState(null, '', part === 'readme' ? '#tentang' : `#tentang/${part}`); render(); }
   });
 }
 
 export function render() {
   if (!root) return;
+  const want = location.hash.split(/[/:]/)[1]; // #tentang/diag opens a part directly (search, stale-data banner)
+  if (want && ['readme', 'credit', 'changelog', 'diag'].includes(want)) part = want;
   root.querySelectorAll('#a-seg [data-part]').forEach((b) => b.classList.toggle('on', b.dataset.part === part));
+  if (part === 'diag') { diag.render(root.querySelector('#a-body')); return; }
   root.querySelector('#a-body').innerHTML = part === 'credit' ? credit() : part === 'changelog' ? changelog() : readme();
 }
 
@@ -98,3 +103,6 @@ function changelog() {
       <ul>${r.items.map((i) => `<li>${esc(t(i))}</li>`).join('')}</ul>
     </div>`).join('')}</div>`;
 }
+
+// static pages; 🩺 Diagnostics refreshes with its own button (not on every data change)
+export function onData() {}

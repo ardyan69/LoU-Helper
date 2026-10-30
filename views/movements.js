@@ -1,6 +1,7 @@
 // "🚩 Pergerakan" — armies on the move, incoming attacks, trade convoys and recruitment, read from the game's own state.
 import { fmtNum, fmtAgo, esc, trainingTimes, unitName } from '../lib/shared.js';
 import { t, locale } from '../lib/i18n.js';
+import { guessUnits } from '../lib/unitguess.js';
 
 let root, ctx, timer = null;
 const f = { order: 'all', city: 'all' };
@@ -127,7 +128,7 @@ function draw(state) {
       ${inc.length ? `<div class="table-wrap"><table><thead><tr><th>${t('Dari')}</th><th>${t('Penyerang')}</th><th>${t('Ke')}</th><th>${t('Misi')}</th><th>${t('Pasukan')}</th><th>${t('Tiba dalam')}</th><th>${t('Jam')}</th><th></th></tr></thead><tbody>
         ${inc.sort((a, b) => (a.arriveAt || 0) - (b.arriveAt || 0)).map((a) => `<tr>
           <td>${place(a.src, a.fromX, a.fromY)}</td><td><b>${esc(a.owner || '?')}</b></td><td>${place(a.target, a.toX, a.toY)}</td>
-          <td>${orderLabel(a.order)}</td><td>${a.units ? units(a.units) : `<span class="muted">${t('tidak terlihat')}</span>`}</td>
+          <td>${orderLabel(a.order)}</td><td>${a.units && Object.keys(a.units).length ? units(a.units) : `<span class="muted">${t('tidak terlihat')}</span>${guessHtml(a, state)}`}</td>
           <td class="num" style="color:var(--bad);font-weight:700">${cd(a.arriveAt - now)}</td><td class="small">${clock(a.arriveAt - (mv.serverOffset || 0))}</td>
           <td><button class="btn sm" data-defend="${esc(String(a.id))}" title="${t('Cari kota yang sempat mengirim bantuan')}">🛡️ ${t('Bantuan')}</button></td></tr>`).join('')}
       </tbody></table></div>` : `<div class="small" style="color:var(--good)">${t('Tidak ada serangan masuk.')} ✓</div>`}
@@ -194,4 +195,13 @@ function draw(state) {
         }).join('')}
       </tbody></table></div>
     </div>`;
+}
+
+// 🔎 hidden troops: the unit class that matches the army's speed (lib/unitguess.js)
+function guessHtml(a, state) {
+  const g = guessUnits(a, state?.speedCal?.factor || 1 / (state?.movements?.worldSpeed || 1));
+  if (!g) return '';
+  if (!g.best) return `<div class="small muted">🔎 ${t('Kecepatan {m} menit/field tidak cocok dengan unit mana pun')}</div>`;
+  const alt = g.alts.length ? ` <span class="muted">· ${t('atau')} ${g.alts.map((x) => esc(x.names.join('/'))).join(' · ')}</span>` : '';
+  return `<div class="small" title="${esc(t('Pasukan bergerak secepat unit paling lambat: {m} menit/field ({d} field).', { m: g.mpf.toFixed(1), d: g.dist.toFixed(1) }))}">🔎 ${t('Kemungkinan: {u}', { u: `<b>${esc(g.best.names.join('/'))}</b>` })}${g.best.bonus ? ` <span class="muted">(${t('bonus kecepatan ≈ +{p}%', { p: g.best.bonus })})</span>` : ''}${alt}</div>`;
 }

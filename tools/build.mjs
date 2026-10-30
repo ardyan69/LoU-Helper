@@ -13,7 +13,8 @@ import { execFileSync } from 'node:child_process';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const DIST = join(ROOT, 'dist');
-const EXCLUDE = new Set(['dist', 'node_modules', 'tests', 'tools', 'docs', 'package.json', 'package-lock.json', '.git', '.gitignore', 'README.md', 'README.id.md', 'CHANGELOG.md', 'CHANGELOG.id.md']);
+// development files (dot-files like .github are skipped too)
+const EXCLUDE = new Set(['dist', 'node_modules', 'tests', 'tools', 'docs', 'package.json', 'package-lock.json', 'eslint.config.js', 'tsconfig.json', 'README.md', 'README.id.md', 'CHANGELOG.md', 'CHANGELOG.id.md']);
 const base = JSON.parse(readFileSync(join(ROOT, 'manifest.json'), 'utf8'));
 const VERSION = base.version;
 const GECKO_ID = 'lou-revival-helper@ardhie';

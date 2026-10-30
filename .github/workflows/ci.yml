@@ -1,0 +1,32 @@
+# Every push / pull request: lint, type check, tests (formulas, readers, translations, generated docs),
+# build for all browsers, Mozilla's linter. The built packages are kept as a downloadable artifact.
+name: CI
+on:
+  push:
+    branches: ['**']
+    tags-ignore: ['v*']
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - run: npm run lint:firefox
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lou-helper-packages
+          path: |
+            dist/*.zip
+            dist/*.xpi
+          retention-days: 14

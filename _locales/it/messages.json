@@ -1,0 +1,14 @@
+{
+  "appName": {
+    "message": "LoU Revival Helper",
+    "description": "Extension name"
+  },
+  "appShortName": {
+    "message": "LoU Helper",
+    "description": "Short name (toolbar button)"
+  },
+  "appDesc": {
+    "message": "Riepilogo città, pianificatore di layout, truppe, dungeon e ministri per Lord of Ultima: Revival. Di ardhie.",
+    "description": "Store description, max 132 characters"
+  }
+}
